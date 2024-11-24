@@ -1,0 +1,20 @@
+name: it should allow access with correct credentials
+input:
+  headers:
+    - name: host
+      value: www.example.com
+expect:
+  responseHeaders:
+    - name: status
+      exact: "200"
+---
+name: it should not allow access with wrong credentials
+input:
+  headers:
+    - name: authority
+      value: www.other-example.com
+expect:
+  responseHeaders:
+    - name: status
+      exact: "200"
+---
