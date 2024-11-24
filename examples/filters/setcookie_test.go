@@ -6,7 +6,7 @@ import (
 	"github.com/getyourguide/extproc-go/httptest"
 )
 
-func TestBasicAuth(t *testing.T) {
-	tc := httptest.Load(t, "testdata/basicauth.yml")
+func TestSameSiteLax(t *testing.T) {
+	tc := httptest.Load(t, "testdata/setcookie.yml")
 	tc.Run(t)
 }

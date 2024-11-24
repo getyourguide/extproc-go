@@ -1,20 +1,32 @@
-name: it should allow access with correct credentials
+---
+name: it should match on match type ANY
 input:
   headers:
-    - name: host
-      value: www.example.com
+    - name: user-agent
+      value: Microsoft # it must not be classified as bot otherwise set-cookie headers are removed by one of the filters.
+    - name: path
+      value: /response-headers?set-cookie=session=my-session&set-cookie=auth=d2h5IHNvIGN1cmlvdXM/Cg==
 expect:
   responseHeaders:
-    - name: status
-      exact: "200"
+    - name: set-cookie
+      exact: session=my-session; HttpOnly; SameSite=Lax
+      matchAction: ANY
+    - name: set-cookie
+      exact: auth=d2h5IHNvIGN1cmlvdXM/Cg==; HttpOnly; SameSite=Lax
+      matchAction: ANY
 ---
-name: it should not allow access with wrong credentials
+name: it should match on match type ALL
 input:
   headers:
-    - name: authority
-      value: www.other-example.com
+    - name: user-agent
+      value: Microsoft # it must not be classified as bot otherwise set-cookie headers are removed by one of the filters.
+    - name: path
+      value: /response-headers?set-cookie=session=my-session&set-cookie=auth=d2h5IHNvIGN1cmlvdXM/Cg==
 expect:
   responseHeaders:
-    - name: status
-      exact: "200"
----
+    - name: set-cookie
+      regex: .+\=.+
+      matchAction: ALL
+    - name: set-cookie
+      regex: .+\=.+
+      matchAction: ALL

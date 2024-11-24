@@ -16,7 +16,7 @@ func TestIntegrationTest(t *testing.T) {
 		HeaderName:  "x-custom-header",
 		HeaderValue: "value-1",
 	}
-	testcases := test.LoadTemplate(t, "testdata/integration.yml", templateData)
+	testcases := test.LoadTemplate(t, "testdata/httptest.yml", templateData)
 	require.NotEmpty(t, testcases)
 	testcases.Run(t)
 }

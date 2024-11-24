@@ -24,7 +24,6 @@ func main() {
 func run() error {
 	server := grpc.NewServer()
 	extprocService := service.New(service.WithFilters(
-		&filters.BasicAuth{},
 		&filters.SameSiteLaxMode{},
 	))
 	extproc.RegisterExternalProcessorServer(server, extprocService)
