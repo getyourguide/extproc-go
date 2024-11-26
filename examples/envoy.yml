@@ -82,11 +82,11 @@ static_resources:
       load_assignment:
         cluster_name: outbound|uds||extproc-go
         endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                pipe:
-                  path: /var/run/extproc-go/extproc-go.sock
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    pipe:
+                      path: /var/run/extproc-go/extproc-go.sock
 
     - name: outbound|8080||extproc-go
       connect_timeout: 0.25s
@@ -94,12 +94,12 @@ static_resources:
       load_assignment:
         cluster_name: outbound|8080||extproc-go
         endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: extproc-go
-                  port_value: 8080
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: extproc-go
+                      port_value: 8080
 
     - name: outbound|8126||datadog
       connect_timeout: 1s
@@ -108,24 +108,16 @@ static_resources:
       load_assignment:
         cluster_name: outbound|8126||datadog
         endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: localhost
-                  port_value: 8126
-
-# tracing:
-#   http:
-#     name: envoy.tracers.datadog
-#     typed_config:
-#       "@type": type.googleapis.com/envoy.config.trace.v3.DatadogConfig
-#       collector_cluster: outbound|8126||datadog
-#       service_name: extproc-go
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: localhost
+                      port_value: 8126
 
 overload_manager:
   resource_monitors:
-  - name: "envoy.resource_monitors.global_downstream_max_connections"
-    typed_config:
-      "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
-      max_active_downstream_connections: 1000
+    - name: "envoy.resource_monitors.global_downstream_max_connections"
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+        max_active_downstream_connections: 1000

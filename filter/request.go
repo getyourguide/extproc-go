@@ -88,7 +88,7 @@ func (r *RequestContext) ResponseHeaderValues(key string) []string {
 	return r.rawHeaders[RequestPhaseResponseHeaders].Values(key)
 }
 
-// MutatedHeaders returns a copy of the mutated headers from the given phase.
+// MutatedHeaders returns a copy of headers mutated in the given phase.
 func (r *RequestContext) MutatedHeaders(phase RequestPhase) http.Header {
 	if r.mutatedHeaders[phase] == nil {
 		r.mutatedHeaders[phase] = make(http.Header)

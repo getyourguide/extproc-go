@@ -33,10 +33,10 @@ type Retry struct {
 	WaitMin     time.Duration // Minimum time to wait
 	WaitMax     time.Duration // Maximum time to wait
 
-	// Check specifies a policy for handling retries. It is called
+	// PostHook specifies a policy for handling retries. It is called
 	// following each request with the response and error values returned by
-	// the http call. If Check returns false, the Client stops retrying
-	Check func(Actual) bool
+	// the http call. If PostHook returns false, the Client stops retrying
+	PostHook func(Actual) bool
 }
 
 type Options interface {
@@ -67,8 +67,8 @@ func (c Case) Run(t *testing.T, opts ...Options) {
 			if err == nil {
 				break
 			}
-			if c.retry.Check != nil {
-				if !c.retry.Check(got) {
+			if c.retry.PostHook != nil {
+				if !c.retry.PostHook(got) {
 					break
 				}
 			}
@@ -233,12 +233,12 @@ func httpCall(t *testing.T, tt Case) Actual {
 	}
 	defer httpClient.CloseIdleConnections()
 
-	uri := "http://127.0.0.1:10000"
+	baseURL := "http://127.0.0.1:10000"
 	if endpoint := os.Getenv("EXTPROC_TEST_ENDPOINT"); endpoint != "" {
-		uri = endpoint
+		baseURL = endpoint
 	}
-	path := tt.Input.Headers.Get("path")
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s", uri, path), nil)
+	url := fmt.Sprintf("%s%s", baseURL, tt.Input.Headers.Get("path"))
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	require.NoError(t, err)
 
 	for _, header := range tt.Input.Headers {
