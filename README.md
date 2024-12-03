@@ -1,11 +1,13 @@
 # extproc-go
 
-A Go framework for building [Envoy External Processor](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_proc_filter).
+A Go library for building [Envoy External Processor](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_proc_filter).
 
 > [!NOTE]
-> This is a work in progress and the API is subject to change.
+> This code is used in large scale production but is a work in progress and the API is subject to change.
 
 ## Example Usage
+
+The following is an example of a filter that sets the SameSite attribute to Lax on all cookies set in the response headers. The filter is implemented as a Go struct that implements the `ResponseHeaders` method of the [filter.Filter](filter/filter.go) interface. The `ResponseHeaders` method is called by the extproc-go library when the filter is invoked by Envoy.
 
 - [SameSiteLaxMode](./examples/filters/setcookie.go)
 
@@ -26,6 +28,35 @@ func (f *SameSiteLaxMode) ResponseHeaders(ctx context.Context, crw *filter.Commo
 		crw.AppendHeader("set-cookie", cookie.String())
 	}
 	return nil, nil
+}
+```
+
+The filter is then registered with the extproc-go library and the server is started to listen for incoming requests from Envoy.
+
+```go
+package main
+
+import (
+	"net"
+
+	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
+	"github.com/getyourguide/extproc-go/examples/filters"
+	"github.com/getyourguide/extproc-go/service"
+	"google.golang.org/grpc"
+)
+
+
+func main() {
+	server := grpc.NewServer()
+
+	extprocService := service.New(service.WithFilters(
+		&filters.SameSiteLaxMode{},
+	))
+	extproc.RegisterExternalProcessorServer(server, extprocService)
+
+	// handle error ...
+	listener, _ := net.Listen("unix", "/var/run/extproc-go/extproc-go.sock")
+	_ = server.Serve(listener)
 }
 ```
 
