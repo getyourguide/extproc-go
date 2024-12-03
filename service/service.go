@@ -10,8 +10,11 @@ import (
 	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
 	"github.com/go-logr/logr"
-	"go.opencensus.io/trace"
-	"google.golang.org/grpc/codes"
+	"go.opentelemetry.io/otel/codes"
+	grpcodes "google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc/status"
 )
 
@@ -43,7 +46,7 @@ func New(options ...Option) *ExtProcessor {
 		opt.apply(f)
 	}
 	if f.tracer == nil {
-		f.tracer = trace.DefaultTracer
+		f.tracer = noop.NewTracerProvider().Tracer(TraceMessageOperationName)
 	}
 
 	return f
@@ -76,42 +79,42 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 
 		switch procreq.Request.(type) {
 		case *extproc.ProcessingRequest_RequestHeaders:
-			ctx, span := svc.tracer.StartSpan(ctx, RequestHeadersResourceName)
+			ctx, span := svc.tracer.Start(ctx, RequestHeadersResourceName)
 			if err := svc.requestHeadersMessage(ctx, crw, req, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_RequestBody:
-			ctx, span := svc.tracer.StartSpan(ctx, RequestBodyResourceName)
+			ctx, span := svc.tracer.Start(ctx, RequestBodyResourceName)
 			if err := svc.requestBodyMessage(ctx, crw, req, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_RequestTrailers:
-			ctx, span := svc.tracer.StartSpan(ctx, RequestTrailersResourceName)
+			ctx, span := svc.tracer.Start(ctx, RequestTrailersResourceName)
 			if err := svc.requestTrailersMessage(ctx, crw, req, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_ResponseHeaders:
-			ctx, span := svc.tracer.StartSpan(ctx, ResponseHeadersResourceName)
+			ctx, span := svc.tracer.Start(ctx, ResponseHeadersResourceName)
 			if err := svc.responseHeadersMessage(ctx, crw, req, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_ResponseBody:
-			ctx, span := svc.tracer.StartSpan(ctx, ResponseBodyResourceName)
+			ctx, span := svc.tracer.Start(ctx, ResponseBodyResourceName)
 			if err := svc.responseBodyMessage(ctx, crw, req, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_ResponseTrailers:
-			ctx, span := svc.tracer.StartSpan(ctx, ResponseTrailersResourceName)
+			ctx, span := svc.tracer.Start(ctx, ResponseTrailersResourceName)
 			if err := svc.responseTrailersMessage(ctx, crw, req, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
@@ -132,12 +135,12 @@ func (svc *ExtProcessor) requestHeadersMessage(ctx context.Context, crw *filter.
 		default:
 		}
 		resourceName := fmt.Sprintf("%T/RequestHeaders", f)
-		ctx, span := svc.tracer.StartSpan(ctx, resourceName)
-		span.AddAttributes(trace.StringAttribute("filter", fmt.Sprintf("%T", f)))
+		ctx, span := svc.tracer.Start(ctx, resourceName)
+		// span.AddAttributes(trace.StringAttribute("filter", fmt.Sprintf("%T", f)))
 
 		immediateResponse, err := f.RequestHeaders(ctx, crw, req)
 		if err != nil {
-			span.SetStatus(trace.Status{Code: trace.StatusCodeInternal, Message: err.Error()})
+			span.SetStatus(codes.Error, err.Error())
 			span.End()
 			return fmt.Errorf("RequestHeaders: failed running filter %T: %w", f, err)
 		}
@@ -201,12 +204,12 @@ func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, crw *filter
 		default:
 		}
 		resourceName := fmt.Sprintf("%T/ResponseHeaders", f)
-		ctx, span := svc.tracer.StartSpan(ctx, resourceName)
-		span.AddAttributes(trace.StringAttribute("filter", fmt.Sprintf("%T", f)))
+		ctx, span := svc.tracer.Start(ctx, resourceName)
+		// span.AddAttributes(trace.StringAttribute("filter", fmt.Sprintf("%T", f)))
 
 		immediateResponse, err := f.ResponseHeaders(ctx, crw, req)
 		if err != nil {
-			span.SetStatus(trace.Status{Code: trace.StatusCodeInternal, Message: err.Error()})
+			span.SetStatus(codes.Error, err.Error())
 			span.End()
 			return fmt.Errorf("ResponseHeaders: failed running filter %T: %w", f, err)
 		}
@@ -217,7 +220,7 @@ func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, crw *filter
 			})
 		}
 		if err := crw.CommonResponse().Validate(); err != nil {
-			span.SetStatus(trace.Status{Code: trace.StatusCodeInternal, Message: err.Error()})
+			span.SetStatus(codes.Error, err.Error())
 			span.End()
 			return fmt.Errorf("ResponseHeaders: failed validating response in filter %T: %w", f, err)
 		}
@@ -264,7 +267,7 @@ func (svc *ExtProcessor) responseTrailersMessage(_ context.Context, _ *filter.Co
 // IgnoreCanceled returns nil if the error is a context.Canceled error or an io.EOF error.
 func IgnoreCanceled(err error) error {
 	switch {
-	case errors.Is(err, io.EOF), errors.Is(err, status.Error(codes.Canceled, context.Canceled.Error())):
+	case errors.Is(err, io.EOF), errors.Is(err, status.Error(grpcodes.Canceled, context.Canceled.Error())):
 		return nil
 	}
 	return err

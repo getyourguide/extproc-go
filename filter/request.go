@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"fmt"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -40,7 +39,6 @@ type RequestContext struct {
 	rawHeaders     map[RequestPhase]http.Header
 	cookies        []*http.Cookie
 	setCookies     []*http.Cookie
-	remoteAddr     netip.Addr
 	metadata       *Metadata
 	phase          RequestPhase
 	startTime      time.Time
@@ -178,11 +176,6 @@ func (r *RequestContext) Metadata() *Metadata {
 		r.metadata = &Metadata{}
 	}
 	return r.metadata
-}
-
-// RemoteAddr returns the parsed client IP of the request. Ensure to verify the validity of r.RemoteAddr() by calling r.RemoteAddr().IsValid() before utilizing it.
-func (r *RequestContext) RemoteAddr() netip.Addr {
-	return r.remoteAddr
 }
 
 // RequestPhase returns the current phase of the request

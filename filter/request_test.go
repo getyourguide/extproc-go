@@ -238,24 +238,6 @@ func TestProcessRequestHeaders(t *testing.T) {
 			require.Equal(t, localeCodeName, req.Cookies()[1].Name)
 			require.Equal(t, "en-GB", req.Cookies()[1].Value)
 		},
-	}, {
-		name: "parser client ip",
-		headers: []*corev3.HeaderValue{{
-			Key:      "x-forwarded-for",
-			RawValue: []byte("2.2.2.2,1.1.1.1,10.0.3.2,127.0.0.1"),
-		}},
-		assert: func(t *testing.T, req *filter.RequestContext) {
-			require.Equal(t, "1.1.1.1", req.RemoteAddr().String())
-		},
-	}, {
-		name: "parser invalid ips",
-		headers: []*corev3.HeaderValue{{
-			Key:      "x-forwarded-for",
-			RawValue: []byte("🥲"),
-		}},
-		assert: func(t *testing.T, req *filter.RequestContext) {
-			require.Equal(t, req.RemoteAddr().String(), "invalid IP")
-		},
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
 			msg := &extproc.ProcessingRequest_RequestHeaders{
@@ -380,7 +362,6 @@ func TestDifferentRequestPhase(t *testing.T) {
 			req.Status()
 			req.Metadata().Get("key")
 			req.GetCookie("cookie")
-			req.RemoteAddr()
 			req.RequestHeader("header")
 			req.RequestHeaderValues("header")
 			req.ResponseHeader("header")

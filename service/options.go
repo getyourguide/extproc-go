@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/getyourguide/extproc-go/filter"
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Option interface {
@@ -25,5 +26,11 @@ func WithLogger(log logr.Logger) Option {
 func WithFilters(filters ...filter.Filter) Option {
 	return optionFunc(func(svc *ExtProcessor) {
 		svc.filters = filters
+	})
+}
+
+func WithTracer(tracer trace.Tracer) Option {
+	return optionFunc(func(svc *ExtProcessor) {
+		svc.tracer = tracer
 	})
 }
