@@ -1,0 +1,14 @@
+---
+name: it should set set-cookie headers with SameSite=Lax and HttpOnly
+input:
+  headers:
+    - name: path
+      value: /response-headers?set-cookie=session=my-session&set-cookie=auth=d2h5IHNvIGN1cmlvdXM/Cg==
+expect:
+  responseHeaders:
+    - name: set-cookie
+      exact: session=my-session; HttpOnly; SameSite=Lax
+      matchAction: ANY
+    - name: set-cookie
+      exact: auth=d2h5IHNvIGN1cmlvdXM/Cg==; HttpOnly; SameSite=Lax
+      matchAction: ANY

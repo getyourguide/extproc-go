@@ -1,0 +1,82 @@
+name: it should match exact header match
+input:
+  headers:
+    - name: user-agent
+      value: Google
+expect:
+  requestHeaders:
+    - name: user-agent
+      exact: Google
+---
+name: it should return 200 status code
+input:
+  headers:
+    - name: host
+      value: www.domain.com
+    - name: path
+      value: /
+expect:
+  requestHeaders:
+    - name: host
+      exact: www.domain.com
+    - name: path
+      exact: /
+  responseHeaders:
+    - name: status
+      exact: 200
+---
+name: it should match on absense
+input:
+  headers:
+    - name: host
+      value: www.domain.com
+    - name: path
+      value: /
+expect:
+  requestHeaders:
+    - name: header-missing
+      absent: true
+---
+name: it should match on header present
+input:
+  headers:
+    - name: host
+      value: www.domain.com
+    - name: path
+      value: /
+    - name: x-request-id
+      value: abc-123
+expect:
+  requestHeaders:
+    - name: x-request-id
+      absent: false
+---
+name: it should match on regex
+input:
+  headers:
+    - name: x-match-regex
+      value: ZZ
+expect:
+  requestHeaders:
+    - name: x-match-regex
+      regex: ^[A-Z]{2}$
+---
+name: it should render template variable
+input:
+  headers:
+    - name: x-custom-header
+      value: value-1
+expect:
+  requestHeaders:
+    - name: {{ .HeaderName }}
+      exact: {{ .HeaderValue }}
+---
+name: it should set response headers
+input:
+  headers:
+    - name: path
+      value: /response-headers?x-header-a=value
+expect:
+  responseHeaders:
+    - name: x-header-a
+      exact: value

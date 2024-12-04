@@ -1,0 +1,40 @@
+version: "3"
+services:
+  envoy:
+    image: istio/proxyv2:1.24.0
+    entrypoint:
+      - /usr/local/bin/envoy
+      - --log-level warn
+      - -c
+      - /etc/envoy/envoy.yml
+    ports:
+      - 10000:10000
+      - 15000:15000
+    volumes:
+      - ./envoy.yml:/etc/envoy/envoy.yml
+      - shared:/var/run/extproc-go/
+
+  extproc-go:
+    build:
+      context: ../
+      dockerfile: examples/Dockerfile
+    ports:
+      - 8080:8080
+    develop:
+      watch:
+        - action: rebuild
+          path: "."
+          ignore:
+          - "**/*_test.go"
+          - "**/*.yml"
+          - "**/*.yaml"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://extproc-go:8080/headers" ]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+    volumes:
+      - shared:/var/run/extproc-go/
+
+volumes:
+  shared: {}
