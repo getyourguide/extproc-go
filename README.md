@@ -37,25 +37,18 @@ The filter is then registered with the extproc-go library and the server is star
 package main
 
 import (
-	"net"
+	"context"
 
-	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/examples/filters"
-	"github.com/getyourguide/extproc-go/service"
-	"google.golang.org/grpc"
+	"github.com/getyourguide/extproc-go/server"
 )
-
 
 func main() {
 	err := server.New(context.Background()).
 		WithFilters(&filters.SameSiteLaxMode{}).
-		WithEcho().
 		Serve()
 
-	if err != nil {
-		slog.Error("failed to start server", "error", err)
-		os.Exit(1)
-	}
+	// handle error ...
 }
 ```
 
