@@ -37,26 +37,18 @@ The filter is then registered with the extproc-go library and the server is star
 package main
 
 import (
-	"net"
+	"context"
 
-	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/examples/filters"
-	"github.com/getyourguide/extproc-go/service"
-	"google.golang.org/grpc"
+	"github.com/getyourguide/extproc-go/server"
 )
 
-
 func main() {
-	server := grpc.NewServer()
-
-	extprocService := service.New(service.WithFilters(
-		&filters.SameSiteLaxMode{},
-	))
-	extproc.RegisterExternalProcessorServer(server, extprocService)
+	err := server.New(context.Background()).
+		WithFilters(&filters.SameSiteLaxMode{}).
+		Serve()
 
 	// handle error ...
-	listener, _ := net.Listen("unix", "/var/run/extproc-go/extproc-go.sock")
-	_ = server.Serve(listener)
 }
 ```
 
@@ -80,7 +72,7 @@ expect:
       matchAction: ANY
 ```
 
-The integration test requires [Envoy](examples/envoy.yml) and [extproc server](examples/main.go) running with the echo handlers loaded, the full setup is available in the [docker-compose.yml](examples/compose.yml) file. To run the tests add the following to your test file:
+The integration test requires [Envoy](examples/envoy.yml) and [extproc server](examples/main.go) running with the echo handlers loaded, the full setup is available in the [compose.yml](./examples/compose.yaml) file. To run the tests add the following to your test file:
 
 ```go
 func TestSameSiteLax(t *testing.T) {
