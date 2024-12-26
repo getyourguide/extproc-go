@@ -47,16 +47,15 @@ import (
 
 
 func main() {
-	server := grpc.NewServer()
+	err := server.New(context.Background()).
+		WithFilters(&filters.SameSiteLaxMode{}).
+		WithEcho().
+		Serve()
 
-	extprocService := service.New(service.WithFilters(
-		&filters.SameSiteLaxMode{},
-	))
-	extproc.RegisterExternalProcessorServer(server, extprocService)
-
-	// handle error ...
-	listener, _ := net.Listen("unix", "/var/run/extproc-go/extproc-go.sock")
-	_ = server.Serve(listener)
+	if err != nil {
+		slog.Error("failed to start server", "error", err)
+		os.Exit(1)
+	}
 }
 ```
 
@@ -80,7 +79,7 @@ expect:
       matchAction: ANY
 ```
 
-The integration test requires [Envoy](examples/envoy.yml) and [extproc server](examples/main.go) running with the echo handlers loaded, the full setup is available in the [docker-compose.yml](examples/compose.yml) file. To run the tests add the following to your test file:
+The integration test requires [Envoy](examples/envoy.yml) and [extproc server](examples/main.go) running with the echo handlers loaded, the full setup is available in the [compose.yml](./examples/compose.yaml) file. To run the tests add the following to your test file:
 
 ```go
 func TestSameSiteLax(t *testing.T) {
