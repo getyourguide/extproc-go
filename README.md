@@ -44,9 +44,10 @@ import (
 )
 
 func main() {
-	err := server.New(context.Background()).
-		WithFilters(&filters.SameSiteLaxMode{}).
-		Serve()
+	err := server.New(context.Background(),
+		server.WithFilters(&filters.SameSiteLaxMode{}),
+		server.WithEcho(),
+	).Serve()
 
 	// handle error ...
 }
@@ -76,7 +77,8 @@ The integration test requires [Envoy](examples/envoy.yml) and [extproc server](e
 
 ```go
 func TestSameSiteLax(t *testing.T) {
-	tc := httptest.Load(t, "testdata/setcookie.yml")
+	// ...
+	tc := extproctest.Load(t, "testdata/setcookie.yml")
 	tc.Run(t)
 }
 ```

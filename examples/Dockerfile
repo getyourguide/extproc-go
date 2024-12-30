@@ -9,7 +9,8 @@ RUN go mod download
 COPY examples/ examples/
 COPY filter/ filter/
 COPY service/ service/
-COPY httptest/ httptest/
+COPY test/ test/
+COPY server/ server/
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     go build -o extproc-go examples/main.go

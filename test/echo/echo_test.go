@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/getyourguide/extproc-go/httptest/echo"
+	"github.com/getyourguide/extproc-go/test/echo"
 	"github.com/stretchr/testify/require"
 )
 

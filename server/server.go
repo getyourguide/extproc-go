@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -10,15 +11,15 @@ import (
 
 	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
-	"github.com/getyourguide/extproc-go/httptest/echo"
 	"github.com/getyourguide/extproc-go/service"
+	"github.com/getyourguide/extproc-go/test/echo"
 	"github.com/go-logr/logr"
 	"google.golang.org/grpc"
 )
 
 const (
-	defaultGrpcNetwork  = "unix"
-	defaultGrpcAddress  = "/tmp/extproc.sock"
+	defaultGrpcNetwork  = "tcp"
+	defaultGrpcAddress  = ":8081"
 	defaultHTTPBindAddr = ":8080"
 	defaultShutdownWait = 5 * time.Second
 )
@@ -40,36 +41,46 @@ type echoConfig struct {
 	httpsrv     *http.Server
 }
 
-func New(ctx context.Context) *Server {
-	return &Server{
+type Option func(*Server)
+
+func New(ctx context.Context, opts ...Option) *Server {
+	srv := &Server{
 		ctx: ctx,
+	}
+	for _, opt := range opts {
+		opt(srv)
+	}
+	return srv
+}
+
+func WithFilters(f ...filter.Filter) Option {
+	return func(s *Server) {
+		s.serviceOpts = append(s.serviceOpts, service.WithFilters(f...))
 	}
 }
 
-func (s *Server) WithFilters(f ...filter.Filter) *Server {
-	s.serviceOpts = append(s.serviceOpts, service.WithFilters(f...))
-	return s
+func WithGrpcServer(server *grpc.Server, network string, address string) Option {
+	return func(s *Server) {
+		s.grpcServer = server
+		s.grpcNetwork = network
+		s.grpcAddress = address
+	}
 }
 
-func (s *Server) WithGrpcServer(server *grpc.Server, network string, address string) *Server {
-	s.grpcServer = server
-	s.grpcNetwork = network
-	s.grpcAddress = address
-	return s
+func WithEcho() Option {
+	return func(s *Server) {
+		s.echoConfig.enabled = true
+	}
 }
 
-func (s *Server) WithEcho() *Server {
-	s.echoConfig.enabled = true
-	return s
-}
-
-func (s *Server) WithEchoServerMux(mux *http.ServeMux, address string) *Server {
-	srv := http.Server{}
-	srv.Handler = mux
-	s.echoConfig.enabled = true
-	s.echoConfig.mux = mux
-	s.echoConfig.bindAddress = address
-	return s
+func WithEchoServerMux(mux *http.ServeMux, address string) Option {
+	return func(s *Server) {
+		srv := http.Server{}
+		srv.Handler = mux
+		s.echoConfig.enabled = true
+		s.echoConfig.mux = mux
+		s.echoConfig.bindAddress = address
+	}
 }
 
 func (s *Server) Serve() error {
@@ -93,6 +104,7 @@ func (s *Server) Serve() error {
 				Addr: s.echoConfig.bindAddress,
 			}
 			s.echoConfig.httpsrv.Handler = s.echoConfig.mux
+			slog.Info("starting http server", "address", s.echoConfig.bindAddress)
 			errCh <- s.echoConfig.httpsrv.ListenAndServe()
 		}()
 	}
@@ -117,24 +129,72 @@ func (s *Server) Serve() error {
 		}
 		extprocService := service.New(s.serviceOpts...)
 		extproc.RegisterExternalProcessorServer(s.grpcServer, extprocService)
-
+		slog.Info("starting grpc server", "address", s.grpcAddress)
 		errCh <- s.grpcServer.Serve(listener)
 	}()
 
 	select {
 	case <-s.ctx.Done():
-		s.grpcServer.GracefulStop()
-		if s.grpcNetwork == "unix" {
-			os.RemoveAll(s.grpcAddress) // nolint:errcheck
-		}
-		if s.echoConfig.httpsrv == nil {
-			return nil
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownWait)
-		s.echoConfig.httpsrv.Shutdown(ctx)
-		cancel()
+		return s.Stop()
 	case err := <-errCh:
 		return err
 	}
+}
+
+func (s *Server) Stop() error {
+	if s.grpcServer != nil {
+		slog.Info("stopping grpc server")
+		s.grpcServer.GracefulStop()
+	}
+	if s.grpcNetwork == "unix" {
+		os.RemoveAll(s.grpcAddress) // nolint:errcheck
+	}
+	if s.echoConfig.httpsrv == nil {
+		return nil
+	}
+	slog.Info("stopping http server")
+	if err := s.echoConfig.httpsrv.Shutdown(context.Background()); err != nil {
+		return fmt.Errorf("http server shutdown error: %w", err)
+	}
 	return nil
+}
+
+func IsReady(s *Server) bool {
+	if s.echoConfig.enabled {
+		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/headers", s.echoConfig.bindAddress), nil)
+		if err != nil {
+			return false
+		}
+		httpClient := http.Client{
+			Timeout: 5 * time.Second,
+		}
+		res, err := httpClient.Do(req)
+		if err != nil {
+			return false
+		}
+		if res.StatusCode != http.StatusOK {
+			return false
+		}
+	}
+	if s.grpcServer == nil {
+		return false
+	}
+	return true
+}
+
+func WaitReady(s *Server, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	tck := time.NewTicker(500 * time.Millisecond)
+	defer tck.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-tck.C:
+			if IsReady(s) {
+				return nil
+			}
+		}
+	}
 }

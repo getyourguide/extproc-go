@@ -5,30 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/getyourguide/extproc-go/filter"
-	"github.com/getyourguide/extproc-go/httptest/echo"
 	"github.com/getyourguide/extproc-go/server"
+	"github.com/getyourguide/extproc-go/test/echo"
 	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
 	t.Run("Serve with basic configuration", func(t *testing.T) {
 		ctx, shutdown := context.WithCancel(context.Background())
-
+		srv := server.New(ctx)
 		errCh := make(chan error, 1)
 		go func() {
-			errCh <- server.New(ctx).Serve()
+			errCh <- srv.Serve()
 		}()
-
-		waitFor := 5 * time.Second
-		require.Eventually(t, func() bool {
-			_, err := os.Stat("/tmp/extproc.sock")
-			return err == nil
-		}, waitFor, time.Millisecond)
+		server.WaitReady(srv, 5*time.Second)
 
 		shutdown()
 		err := <-errCh
@@ -36,21 +30,15 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("Serve with echo", func(t *testing.T) {
-		ctx, shutdown := context.WithCancel(context.Background())
-
-		errCh := make(chan error, 1)
+		srv := server.New(context.Background(),
+			server.WithEcho(),
+			server.WithFilters(&filter.NoOpFilter{}),
+		)
 		go func() {
-			errCh <- server.New(ctx).
-				WithFilters(&filter.NoOpFilter{}).
-				WithEcho().
-				Serve()
+			require.NoError(t, srv.Serve())
 		}()
-
-		waitFor := 5 * time.Second
-		require.Eventually(t, func() bool {
-			_, err := os.Stat("/tmp/extproc.sock")
-			return err == nil
-		}, waitFor, time.Millisecond)
+		defer srv.Stop()
+		server.WaitReady(srv, 5*time.Second)
 
 		httpClient := http.Client{
 			Timeout: time.Second,
@@ -75,10 +63,6 @@ func TestServer(t *testing.T) {
 		for key, expectedValue := range expectedHeaders {
 			require.Equal(t, expectedValue, resp.Headers[key], "mismatch for header %s", key)
 		}
-
-		shutdown()
-
-		err = <-errCh
 		require.NoError(t, err)
 	})
 }

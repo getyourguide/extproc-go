@@ -1,4 +1,4 @@
-package httptest
+package test
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -19,6 +18,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const DefaultURL = "http://127.0.0.1:10000"
+
 type TestCases []Case
 
 type Case struct {
@@ -26,6 +27,7 @@ type Case struct {
 	Input  Input  `json:"input"`
 	Expect Expect `json:"expect"`
 	retry  Retry
+	url    string
 }
 
 type Retry struct {
@@ -52,6 +54,12 @@ func (f optionFunc) apply(v *Case) {
 func WithRetry(r Retry) Options {
 	return optionFunc(func(c *Case) {
 		c.retry = r
+	})
+}
+
+func WithURL(url string) Options {
+	return optionFunc(func(c *Case) {
+		c.url = url
 	})
 }
 
@@ -219,9 +227,9 @@ func (hm *HeaderMatch) MatchValue() string {
 	return ""
 }
 
-func (cases TestCases) Run(t *testing.T) {
+func (cases TestCases) Run(t *testing.T, opts ...Options) {
 	for _, tt := range cases {
-		tt.Run(t)
+		tt.Run(t, opts...)
 	}
 }
 
@@ -233,12 +241,9 @@ func httpCall(t *testing.T, tt Case) Actual {
 	}
 	defer httpClient.CloseIdleConnections()
 
-	baseURL := "http://127.0.0.1:10000"
-	if endpoint := os.Getenv("EXTPROC_TEST_ENDPOINT"); endpoint != "" {
-		baseURL = endpoint
-	}
-	url := fmt.Sprintf("%s%s", baseURL, tt.Input.Headers.Get("path"))
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	baseURL := cmp.Or(tt.url, DefaultURL)
+	u := fmt.Sprintf("%s%s", baseURL, tt.Input.Headers.Get("path"))
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	require.NoError(t, err)
 
 	for _, header := range tt.Input.Headers {
