@@ -3,10 +3,10 @@ package filters_test
 import (
 	"testing"
 
-	"github.com/getyourguide/extproc-go/httptest"
+	extproctest "github.com/getyourguide/extproc-go/test"
 )
 
 func TestSameSiteLax(t *testing.T) {
-	tc := httptest.Load(t, "testdata/setcookie.yml")
+	tc := extproctest.Load(t, "testdata/setcookie.yml")
 	tc.Run(t)
 }

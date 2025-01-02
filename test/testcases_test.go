@@ -1,10 +1,9 @@
-package httptest_test
+package test_test
 
 import (
 	"testing"
 
-	test "github.com/getyourguide/extproc-go/httptest"
-
+	extproctest "github.com/getyourguide/extproc-go/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +15,7 @@ func TestIntegrationTest(t *testing.T) {
 		HeaderName:  "x-custom-header",
 		HeaderValue: "value-1",
 	}
-	testcases := test.LoadTemplate(t, "testdata/httptest.yml", templateData)
+	testcases := extproctest.LoadTemplate(t, "testdata/httptest.yml", templateData)
 	require.NotEmpty(t, testcases)
 	testcases.Run(t)
 }

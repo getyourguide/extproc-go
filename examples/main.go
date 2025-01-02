@@ -11,11 +11,10 @@ import (
 
 func main() {
 	slog.Info("starting server")
-
-	err := server.New(context.Background()).
-		WithFilters(&filters.SameSiteLaxMode{}).
-		WithEcho().
-		Serve()
+	err := server.New(context.Background(),
+		server.WithFilters(&filters.SameSiteLaxMode{}),
+		server.WithEcho(),
+	).Serve()
 
 	if err != nil {
 		slog.Error("failed to start server", "error", err)
