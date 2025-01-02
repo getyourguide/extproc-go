@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 
 	_ "embed"
@@ -50,7 +49,6 @@ type TestContainer struct {
 	testcontainers.Container
 	overrides    testcontainers.GenericContainerRequest
 	waitStrategy wait.Strategy
-	envoyConfig  io.Reader
 }
 
 func NewTestContainer(opts ...TestContainerOption) *TestContainer {
