@@ -26,21 +26,18 @@ func isRouterHeader(key string) bool {
 // CommonResponseWriter is a wraper on top of extproc.CommonResponse
 // It provides a fluent API to mutate the request and response headers and body
 type CommonResponseWriter struct {
+	header         http.Header
 	commonResponse *extproc.CommonResponse
-	headers        http.Header
 }
 
 func NewCommonResponseWriter(headers http.Header) *CommonResponseWriter {
-	if headers == nil {
-		headers = make(http.Header)
-	}
 	crw := &CommonResponseWriter{
 		commonResponse: &extproc.CommonResponse{
 			HeaderMutation: &extproc.HeaderMutation{},
 			Trailers:       &corev3.HeaderMap{},
 			BodyMutation:   &extproc.BodyMutation{},
 		},
-		headers: headers,
+		header: headers,
 	}
 	return crw
 }
@@ -51,9 +48,9 @@ func (crw *CommonResponseWriter) headerAction(key string, value string, appendAc
 	switch appendAction {
 	case corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD:
 		shouldAppend = &wrappers.BoolValue{Value: true} // FIXME: This is not the documented behavior but it seems to be the only way to append a header.
-		crw.headers.Add(key, value)
+		crw.header.Add(key, value)
 	case corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD, corev3.HeaderValueOption_OVERWRITE_IF_EXISTS:
-		crw.headers.Set(key, value)
+		crw.header.Set(key, value)
 	}
 	crw.commonResponse.HeaderMutation.SetHeaders = append(crw.commonResponse.HeaderMutation.SetHeaders, &corev3.HeaderValueOption{
 		Header: &corev3.HeaderValue{
@@ -92,7 +89,7 @@ func (crw *CommonResponseWriter) RemoveHeaders(headers ...string) *CommonRespons
 			continue
 		}
 		crw.commonResponse.HeaderMutation.RemoveHeaders = append(crw.commonResponse.HeaderMutation.RemoveHeaders, h)
-		crw.headers.Del(h)
+		crw.header.Del(h)
 	}
 	return crw
 }

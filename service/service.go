@@ -1,11 +1,11 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 
 	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
@@ -56,7 +56,7 @@ func New(options ...Option) *ExtProcessor {
 // The protocol itself is based on a bidirectional gRPC stream. Envoy will send the server ProcessingRequest messages, and the server must reply with ProcessingResponse.
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/ext_proc.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-externalfilter
 func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer) error {
-	req := &filter.RequestContext{}
+	req := filter.NewRequestContext()
 	ctx := procsrv.Context()
 	for {
 		procreq, err := procsrv.Recv()
@@ -64,58 +64,46 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 			return IgnoreCanceled(err)
 		}
 
-		headers := make(http.Header)
-		crw := filter.NewCommonResponseWriter(headers)
-		req.Process(procreq.Request, headers)
-
-		requestLog := svc.log.WithValues(
-			"RequestPhase", req.RequestPhase(),
-			"Authority", req.Authority(),
-			"Method", req.Method(),
-			"Path", req.URL().Path,
-			"RequestID", req.RequestID(),
-		)
-		ctx := logr.NewContext(ctx, requestLog)
-
-		switch procreq.Request.(type) {
+		ctx := logr.NewContext(ctx, svc.log)
+		switch msg := procreq.Request.(type) {
 		case *extproc.ProcessingRequest_RequestHeaders:
 			ctx, span := svc.tracer.Start(ctx, RequestHeadersResourceName)
-			if err := svc.requestHeadersMessage(ctx, crw, req, procsrv); err != nil {
+			if err := svc.requestHeadersMessage(ctx, req, msg, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_RequestBody:
 			ctx, span := svc.tracer.Start(ctx, RequestBodyResourceName)
-			if err := svc.requestBodyMessage(ctx, crw, req, procsrv); err != nil {
+			if err := svc.requestBodyMessage(ctx, req, msg, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_RequestTrailers:
 			ctx, span := svc.tracer.Start(ctx, RequestTrailersResourceName)
-			if err := svc.requestTrailersMessage(ctx, crw, req, procsrv); err != nil {
+			if err := svc.requestTrailersMessage(ctx, req, msg, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_ResponseHeaders:
 			ctx, span := svc.tracer.Start(ctx, ResponseHeadersResourceName)
-			if err := svc.responseHeadersMessage(ctx, crw, req, procsrv); err != nil {
+			if err := svc.responseHeadersMessage(ctx, req, msg, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_ResponseBody:
 			ctx, span := svc.tracer.Start(ctx, ResponseBodyResourceName)
-			if err := svc.responseBodyMessage(ctx, crw, req, procsrv); err != nil {
+			if err := svc.responseBodyMessage(ctx, req, msg, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
 			span.End()
 		case *extproc.ProcessingRequest_ResponseTrailers:
 			ctx, span := svc.tracer.Start(ctx, ResponseTrailersResourceName)
-			if err := svc.responseTrailersMessage(ctx, crw, req, procsrv); err != nil {
+			if err := svc.responseTrailersMessage(ctx, req, msg, procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
@@ -127,7 +115,13 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 }
 
 // Step 1. Request headers: Contains the headers from the original HTTP request.
-func (svc *ExtProcessor) requestHeadersMessage(ctx context.Context, crw *filter.CommonResponseWriter, req *filter.RequestContext, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) requestHeadersMessage(ctx context.Context, req *filter.RequestContext, msg *extproc.ProcessingRequest_RequestHeaders, procsrv extproc.ExternalProcessor_ProcessServer) error {
+	for _, header := range msg.RequestHeaders.GetHeaders().GetHeaders() {
+		headerValue := cmp.Or(string(header.GetRawValue()), header.GetValue())
+		req.RequestHeaders.Add(header.Key, headerValue)
+	}
+	crw := filter.NewCommonResponseWriter(req.RequestHeaders)
+
 	for _, f := range svc.filters {
 		select {
 		case <-ctx.Done():
@@ -174,7 +168,7 @@ func (svc *ExtProcessor) requestHeadersMessage(ctx context.Context, crw *filter.
 }
 
 // Step 2. (Not implemented) Request body: Delivered if they are present and sent in a single message if the BUFFERED or BUFFERED_PARTIAL mode is chosen, in multiple messages if the STREAMED mode is chosen, and not at all otherwise.
-func (svc *ExtProcessor) requestBodyMessage(_ context.Context, _ *filter.CommonResponseWriter, _ *filter.RequestContext, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) requestBodyMessage(_ context.Context, _ *filter.RequestContext, _ *extproc.ProcessingRequest_RequestBody, procsrv extproc.ExternalProcessor_ProcessServer) error {
 	r := &extproc.ProcessingResponse{
 		Response: &extproc.ProcessingResponse_RequestBody{},
 	}
@@ -185,7 +179,7 @@ func (svc *ExtProcessor) requestBodyMessage(_ context.Context, _ *filter.CommonR
 }
 
 // Step 3. (Not implemented) Request trailers: Delivered if they are present and if the trailer mode is set to SEND.
-func (svc *ExtProcessor) requestTrailersMessage(_ context.Context, _ *filter.CommonResponseWriter, _ *filter.RequestContext, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) requestTrailersMessage(_ context.Context, _ *filter.RequestContext, _ *extproc.ProcessingRequest_RequestTrailers, procsrv extproc.ExternalProcessor_ProcessServer) error {
 	r := &extproc.ProcessingResponse{
 		Response: &extproc.ProcessingResponse_RequestTrailers{},
 	}
@@ -196,7 +190,13 @@ func (svc *ExtProcessor) requestTrailersMessage(_ context.Context, _ *filter.Com
 }
 
 // Step 4. Response headers: Contains the headers from the HTTP response. Keep in mind that if the upstream system sends them before processing the request body that this message may arrive before the complete body.
-func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, crw *filter.CommonResponseWriter, req *filter.RequestContext, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, req *filter.RequestContext, msg *extproc.ProcessingRequest_ResponseHeaders, procsrv extproc.ExternalProcessor_ProcessServer) error {
+	for _, header := range msg.ResponseHeaders.GetHeaders().GetHeaders() {
+		headerValue := cmp.Or(string(header.GetRawValue()), header.GetValue())
+		req.ResponseHeaders.Add(header.Key, headerValue)
+	}
+	crw := filter.NewCommonResponseWriter(req.ResponseHeaders)
+
 	for _, f := range svc.filters {
 		select {
 		case <-ctx.Done():
@@ -243,7 +243,7 @@ func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, crw *filter
 }
 
 // Step 5. (Not implemented) Response body: Sent according to the processing mode like the request body.
-func (svc *ExtProcessor) responseBodyMessage(_ context.Context, _ *filter.CommonResponseWriter, _ *filter.RequestContext, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) responseBodyMessage(_ context.Context, _ *filter.RequestContext, _ *extproc.ProcessingRequest_ResponseBody, procsrv extproc.ExternalProcessor_ProcessServer) error {
 	r := &extproc.ProcessingResponse{
 		Response: &extproc.ProcessingResponse_ResponseBody{},
 	}
@@ -254,7 +254,7 @@ func (svc *ExtProcessor) responseBodyMessage(_ context.Context, _ *filter.Common
 }
 
 // Step 6. (Not implemented) Response trailers: Delivered according to the processing mode like the request trailers.
-func (svc *ExtProcessor) responseTrailersMessage(_ context.Context, _ *filter.CommonResponseWriter, _ *filter.RequestContext, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) responseTrailersMessage(_ context.Context, _ *filter.RequestContext, _ *extproc.ProcessingRequest_ResponseTrailers, procsrv extproc.ExternalProcessor_ProcessServer) error {
 	r := &extproc.ProcessingResponse{
 		Response: &extproc.ProcessingResponse_ResponseTrailers{},
 	}
