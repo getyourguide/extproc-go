@@ -1,3 +1,0 @@
-# SRE
-
-* @getyourguide/sre @gygrobot
