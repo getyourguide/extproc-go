@@ -13,7 +13,6 @@ import (
 	"github.com/getyourguide/extproc-go/filter"
 	"github.com/getyourguide/extproc-go/service"
 	"github.com/getyourguide/extproc-go/test/echo"
-	"github.com/go-logr/logr"
 	"google.golang.org/grpc"
 )
 
@@ -31,7 +30,6 @@ type Server struct {
 	grpcAddress string
 	echoConfig  echoConfig
 	ctx         context.Context
-	log         logr.Logger
 }
 
 type echoConfig struct {

@@ -3,7 +3,6 @@ package server_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -22,10 +21,11 @@ func TestServer(t *testing.T) {
 		go func() {
 			errCh <- srv.Serve()
 		}()
-		server.WaitReady(srv, 5*time.Second)
+		err := server.WaitReady(srv, 5*time.Second)
+		require.NoError(t, err)
 
 		shutdown()
-		err := <-errCh
+		err = <-errCh
 		require.NoError(t, err)
 	})
 
@@ -37,13 +37,14 @@ func TestServer(t *testing.T) {
 		go func() {
 			require.NoError(t, srv.Serve())
 		}()
-		defer srv.Stop()
-		server.WaitReady(srv, 5*time.Second)
+		defer require.NoError(t, srv.Stop())
+		err := server.WaitReady(srv, 5*time.Second)
+		require.NoError(t, err)
 
 		httpClient := http.Client{
 			Timeout: time.Second,
 		}
-		echoURL := fmt.Sprintf("http://:8080/headers")
+		echoURL := "http://:8080/headers"
 		req, err := http.NewRequest(http.MethodGet, echoURL, nil)
 		require.NoError(t, err)
 		req.Header.Set("X-Test-Header", "test-value")
