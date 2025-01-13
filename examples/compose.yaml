@@ -29,7 +29,7 @@ services:
             - "**/*.yml"
             - "**/*.yaml"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://extproc-go:8080/headers"]
+      test: ["CMD", "./healthcheck", "http://extproc-go:8080/headers"]
       interval: 5s
       timeout: 10s
       retries: 60
