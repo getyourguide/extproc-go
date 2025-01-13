@@ -1,24 +1,38 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("usage: %s <url>", os.Args[0])
-	}
-	url := os.Args[1]
+	var (
+		timeout time.Duration
+		url     string
+	)
 
-	r, err := http.Get(url)
+	flag.DurationVar(&timeout, "timeout", 0, "timeout for get requests made by the healthcheck")
+	flag.StringVar(&url, "url", "", "url for requests made by the healthcheck")
+	flag.Parse()
+
+	if timeout == 0 {
+		timeout = 5 * time.Second
+	}
+	if url == "" {
+		log.Fatalf("--url is a required argument")
+	}
+
+	client := http.Client{Timeout: timeout}
+	r, err := client.Get(url)
 	if err != nil {
 		log.Fatalf("requesting %s: %w", url, err.Error())
 	}
 	defer r.Body.Close()
 
-	log.Printf("requesting %s -> %d", url, r.StatusCode)
+	log.Printf("GET %s (%d)", url, r.StatusCode)
 	if r.StatusCode >= 400 {
 		os.Exit(1)
 	}
