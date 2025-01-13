@@ -1,4 +1,3 @@
----
 name: it should set set-cookie headers with SameSite=Lax and HttpOnly
 input:
   headers:

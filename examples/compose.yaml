@@ -13,6 +13,7 @@ services:
       - ./envoy.yml:/etc/envoy/envoy.yml
 
   extproc-go:
+    command: ["./extproc-go", "--filters", "reject"]
     build:
       context: ../
       dockerfile: examples/Dockerfile
@@ -20,6 +21,29 @@ services:
     ports:
       - 8080:8080 # extproc: http echo
       - 8081:8081 # extproc: grpc server
+    develop:
+      watch:
+        - action: rebuild
+          path: "../"
+          ignore:
+            - "**/*_test.go"
+            - "**/*.yml"
+            - "**/*.yaml"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://extproc-go:8080/headers"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+
+  observer:
+    command: ["./extproc-go", "--filters", "observe"]
+    build:
+      context: ../
+      dockerfile: examples/Dockerfile
+    hostname: host.testcontainers.observer.internal
+    ports:
+      - 8082:8080 # extproc: http echo
+      - 8083:8081 # extproc: grpc server
     develop:
       watch:
         - action: rebuild
