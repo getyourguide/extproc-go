@@ -22,13 +22,13 @@ func main() {
 		timeout = 5 * time.Second
 	}
 	if url == "" {
-		log.Fatalf("--url is a required argument")
+		log.Fatal("--url is a required argument")
 	}
 
 	client := http.Client{Timeout: timeout}
 	r, err := client.Get(url)
 	if err != nil {
-		log.Fatalf("requesting %s: %w", url, err.Error())
+		log.Fatalf("requesting %s: %s", url, err.Error())
 	}
 	defer r.Body.Close()
 
