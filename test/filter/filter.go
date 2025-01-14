@@ -28,7 +28,7 @@ type immediateResponse struct {
 type headerMutation struct {
 	RemoveHeader []string          `json:"remove"`
 	SetHeader    map[string]string `json:"set"`
-	ApendHeader  map[string]string `json:"append"`
+	AppendHeader map[string]string `json:"append"`
 }
 
 type Filter struct {
@@ -49,7 +49,7 @@ func (f *Filter) RequestHeaders(ctx context.Context, crw *filter.CommonResponseW
 		crw.SetHeader(k, v)
 
 	}
-	for k, v := range f.Configuration.RequestHeaders.HeaderMutation.ApendHeader {
+	for k, v := range f.Configuration.RequestHeaders.HeaderMutation.AppendHeader {
 		crw.AppendHeader(k, v)
 	}
 	return nil, nil
@@ -66,7 +66,7 @@ func (f *Filter) ResponseHeaders(ctx context.Context, crw *filter.CommonResponse
 	for k, v := range f.Configuration.ResponseHeaders.HeaderMutation.SetHeader {
 		crw.SetHeader(k, v)
 	}
-	for k, v := range f.Configuration.ResponseHeaders.HeaderMutation.ApendHeader {
+	for k, v := range f.Configuration.ResponseHeaders.HeaderMutation.AppendHeader {
 		crw.AppendHeader(k, v)
 	}
 	return nil, nil
