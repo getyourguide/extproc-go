@@ -191,8 +191,6 @@ func (m *Metadata) Get(key any) any {
 	return m.m[key]
 }
 
-type RequestContextOption func(*RequestContext)
-
 func NewRequestContext() *RequestContext {
 	req := &RequestContext{
 		RequestHeaders:  make(http.Header),
