@@ -33,9 +33,10 @@ var (
 )
 
 type ExtProcessor struct {
-	filters []filter.Filter
-	log     logr.Logger
-	tracer  trace.Tracer
+	onStreamEndFn func(req *filter.RequestContext, msg *extproc.ProcessingRequest)
+	filters       []filter.Filter
+	log           logr.Logger
+	tracer        trace.Tracer
 }
 
 var _ extproc.ExternalProcessorServer = &ExtProcessor{}
@@ -56,10 +57,16 @@ func New(options ...Option) *ExtProcessor {
 // The protocol itself is based on a bidirectional gRPC stream. Envoy will send the server ProcessingRequest messages, and the server must reply with ProcessingResponse.
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/ext_proc.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-externalfilter
 func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer) error {
+	var procreq *extproc.ProcessingRequest
+	var err error
 	req := filter.NewRequestContext()
 	ctx := procsrv.Context()
+	if svc.onStreamEndFn != nil {
+		defer svc.onStreamEndFn(req, procreq)
+	}
+
 	for {
-		procreq, err := procsrv.Recv()
+		procreq, err = procsrv.Recv()
 		if err != nil {
 			return IgnoreCanceled(err)
 		}

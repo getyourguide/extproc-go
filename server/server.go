@@ -57,6 +57,12 @@ func WithFilters(f ...filter.Filter) Option {
 	}
 }
 
+func WithOnStreamEndFn(fn func(req *filter.RequestContext, msg *extproc.ProcessingRequest)) Option {
+	return func(s *Server) {
+		s.serviceOpts = append(s.serviceOpts, service.WithOnStreamEndFn(fn))
+	}
+}
+
 func WithGrpcServer(server *grpc.Server, network string, address string) Option {
 	return func(s *Server) {
 		s.grpcServer = server

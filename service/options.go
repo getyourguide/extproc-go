@@ -1,6 +1,7 @@
 package service
 
 import (
+	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/trace"
@@ -26,6 +27,12 @@ func WithLogger(log logr.Logger) Option {
 func WithFilters(filters ...filter.Filter) Option {
 	return optionFunc(func(svc *ExtProcessor) {
 		svc.filters = filters
+	})
+}
+
+func WithOnStreamEndFn(fn func(req *filter.RequestContext, msg *extproc.ProcessingRequest)) Option {
+	return optionFunc(func(svc *ExtProcessor) {
+		svc.onStreamEndFn = fn
 	})
 }
 
