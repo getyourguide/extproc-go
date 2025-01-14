@@ -30,6 +30,10 @@ func TestMain(m *testing.M) {
 	}
 }
 
+func TestRequestHeaders(t *testing.T) {
+	runServiceTest(t, "testdata/request_header_order.yml")
+}
+
 func TestResponseHeaders(t *testing.T) {
 	runServiceTest(t, "testdata/response_header_order.yml")
 }
