@@ -2,8 +2,11 @@ package filters
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
@@ -15,6 +18,7 @@ type StepController struct {
 }
 
 var _ filter.Filter = &StepController{}
+var _ filter.Stream = &StepController{}
 
 type stepInput string
 
@@ -33,7 +37,6 @@ func getStepCode(req *filter.RequestContext) int {
 		return http.StatusUnprocessableEntity
 	}
 	return code
-
 }
 
 func (f *StepController) RequestHeaders(ctx context.Context, crw *filter.CommonResponseWriter, req *filter.RequestContext) (*extproc.ProcessingResponse_ImmediateResponse, error) {
@@ -56,4 +59,33 @@ func (f *StepController) ResponseHeaders(ctx context.Context, crw *filter.Common
 			ImmediateResponse(), nil
 	}
 	return nil, nil
+}
+
+func (f *StepController) OnStreamComplete(req *filter.RequestContext) {
+	req.ResponseHeaders.Set("other", "thing")
+	type Summary struct {
+		RequestID       string
+		RequestHeaders  map[string]string
+		ResponseHeaders map[string]string
+	}
+
+	b, err := json.MarshalIndent(Summary{
+		RequestID:       req.RequestID(),
+		RequestHeaders:  headersToMap(req.RequestHeaders),
+		ResponseHeaders: headersToMap(req.ResponseHeaders),
+	}, "", "  ")
+
+	if err != nil {
+		fmt.Printf("could not marshal response: %s", err.Error())
+	} else {
+		fmt.Println(string(b))
+	}
+}
+
+func headersToMap(headers http.Header) map[string]string {
+	result := make(map[string]string)
+	for k, v := range headers {
+		result[k] = strings.Join(v, ",")
+	}
+	return result
 }

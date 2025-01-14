@@ -45,21 +45,17 @@ func New(ctx context.Context, opts ...Option) *Server {
 	srv := &Server{
 		ctx: ctx,
 	}
+
 	for _, opt := range opts {
 		opt(srv)
 	}
+
 	return srv
 }
 
 func WithFilters(f ...filter.Filter) Option {
 	return func(s *Server) {
 		s.serviceOpts = append(s.serviceOpts, service.WithFilters(f...))
-	}
-}
-
-func WithOnStreamEndFn(fn func(req *filter.RequestContext, msg *extproc.ProcessingRequest)) Option {
-	return func(s *Server) {
-		s.serviceOpts = append(s.serviceOpts, service.WithOnStreamEndFn(fn))
 	}
 }
 
