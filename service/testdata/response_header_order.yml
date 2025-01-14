@@ -1,0 +1,15 @@
+filters:
+- response_headers:
+    header_mutation:
+      set:
+        x-res-header-a: first-filter
+- response_headers:
+    header_mutation:
+      set:
+        x-res-header-a: last-filter
+tests:
+- name: it should run filters in reverse order for response_headers message
+  expect:
+    responseHeaders:
+      - name: x-res-header-a
+        exact: first-filter

@@ -49,6 +49,7 @@ type TestContainer struct {
 	testcontainers.Container
 	overrides    testcontainers.GenericContainerRequest
 	waitStrategy wait.Strategy
+	URL          *url.URL
 }
 
 func NewTestContainer(opts ...TestContainerOption) *TestContainer {
@@ -129,38 +130,38 @@ func WithWaitStrategy(strategy wait.Strategy) TestContainerOption {
 	}
 }
 
-func (c *TestContainer) Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustomizer) (*url.URL, error) {
+func (c *TestContainer) Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustomizer) error {
 	for _, opt := range opts {
 		if err := opt.Customize(&c.overrides); err != nil {
-			return nil, fmt.Errorf("customize: %w", err)
+			return fmt.Errorf("customize: %w", err)
 		}
 	}
 
 	ctr, err := Run(ctx, img, testcontainers.CustomizeRequest(c.overrides))
 	c.Container = ctr
 	if err != nil {
-		return nil, fmt.Errorf("could not run container: %w", err)
+		return fmt.Errorf("could not run container: %w", err)
 	}
 
 	if err := c.waitStrategy.WaitUntilReady(ctx, ctr); err != nil {
-		return nil, fmt.Errorf("container not ready: %w", err)
+		return fmt.Errorf("container not ready: %w", err)
 	}
 
 	hostIP, err := ctr.Host(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get host ip: %w", err)
+		return fmt.Errorf("could not get host ip: %w", err)
 	}
 
 	mappedPort, err := ctr.MappedPort(ctx, "10000")
 	if err != nil {
-		return nil, fmt.Errorf("could not get mapped port: %w", err)
+		return fmt.Errorf("could not get mapped port: %w", err)
 	}
 
 	rawURL := fmt.Sprintf("http://%s:%s", hostIP, mappedPort.Port())
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse url: %w", err)
+		return fmt.Errorf("could not parse url: %w", err)
 	}
-
-	return u, nil
+	c.URL = u
+	return nil
 }
