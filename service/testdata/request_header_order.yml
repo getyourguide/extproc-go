@@ -1,0 +1,15 @@
+filters:
+- requestHeaders:
+    headerMutation:
+      set:
+        x-res-header-a: first-filter
+- requestHeaders:
+    headerMutation:
+      set:
+        x-res-header-a: last-filter
+tests:
+- name: it should run filters in order for requestHeaders message
+  expect:
+    requestHeaders:
+      - name: x-req-header-a
+        exact: last-filter

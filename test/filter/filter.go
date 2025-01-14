@@ -12,13 +12,13 @@ import (
 
 type Configuration struct {
 	RequestHeaders struct {
-		HeaderMutation    headerMutation     `json:"header_mutation"`
-		ImmediateResponse *immediateResponse `json:"immediate_response"`
-	} `json:"request_headers"`
+		HeaderMutation    headerMutation     `json:"headerMutation"`
+		ImmediateResponse *immediateResponse `json:"immediateResponse"`
+	} `json:"requestHeaders"`
 	ResponseHeaders struct {
-		HeaderMutation    headerMutation     `json:"header_mutation"`
-		ImmediateResponse *immediateResponse `json:"immediate_response"`
-	} `json:"response_headers"`
+		HeaderMutation    headerMutation     `json:"headerMutation"`
+		ImmediateResponse *immediateResponse `json:"immediateResponse"`
+	} `json:"responseHeaders"`
 }
 
 type immediateResponse struct {
