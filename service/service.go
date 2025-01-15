@@ -33,10 +33,10 @@ var (
 )
 
 type ExtProcessor struct {
-	filters []filter.Filter
-	streams []filter.Stream
-	log     logr.Logger
-	tracer  trace.Tracer
+	filters         []filter.Filter
+	streamCallbacks []filter.Stream
+	log             logr.Logger
+	tracer          trace.Tracer
 }
 
 var _ extproc.ExternalProcessorServer = &ExtProcessor{}
@@ -59,9 +59,9 @@ func New(options ...Option) *ExtProcessor {
 func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer) error {
 	req := filter.NewRequestContext()
 	ctx := procsrv.Context()
-	if len(svc.streams) > 0 {
+	if len(svc.streamCallbacks) > 0 {
 		defer func() {
-			for _, s := range svc.streams {
+			for _, s := range svc.streamCallbacks {
 				s.OnStreamComplete(req)
 			}
 		}()

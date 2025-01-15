@@ -12,10 +12,7 @@ import (
 func main() {
 	slog.Info("starting server")
 	err := server.New(context.Background(),
-		server.WithFilters(
-			&filters.SameSiteLaxMode{},
-			&filters.StepController{},
-		),
+		server.WithFilters(&filters.SameSiteLaxMode{}),
 		server.WithEcho(),
 	).Serve()
 

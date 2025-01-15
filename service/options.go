@@ -33,7 +33,7 @@ func WithFilters(filters ...filter.Filter) Option {
 				streams = append(streams, s)
 			}
 		}
-		svc.streams = streams
+		svc.streamCallbacks = streams
 	})
 }
 
