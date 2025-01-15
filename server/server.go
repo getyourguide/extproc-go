@@ -45,9 +45,11 @@ func New(ctx context.Context, opts ...Option) *Server {
 	srv := &Server{
 		ctx: ctx,
 	}
+
 	for _, opt := range opts {
 		opt(srv)
 	}
+
 	return srv
 }
 

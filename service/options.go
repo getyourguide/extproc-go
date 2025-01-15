@@ -25,6 +25,14 @@ func WithLogger(log logr.Logger) Option {
 func WithFilters(filters ...filter.Filter) Option {
 	return optionFunc(func(svc *ExtProcessor) {
 		svc.filters = filters
+
+		var streams []filter.Stream
+		for _, f := range filters {
+			if s, ok := f.(filter.Stream); ok {
+				streams = append(streams, s)
+			}
+		}
+		svc.streamCallbacks = streams
 	})
 }
 

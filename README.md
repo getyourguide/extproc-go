@@ -53,6 +53,26 @@ func main() {
 }
 ```
 
+## Filter API
+
+A server is composed of one of more filters. Requests and responses are proxied by Envoy to the external processor server,
+and then each filter in turn receives request information. The current implementation supports implementing the following
+methods:
+
+- `RequestHeaders`: request headers is run on a request being made to the server
+- `ResponseHeaders`: response headers is run on a response being returned from the downstream
+
+The order of processing is determined by the order of filters passed to the server. On request, filters process the request
+from first to last, while on response, filters process the request from last to first. This matches the [envoy implementation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_filters#filter-ordering)
+of filters.
+
+## Stream API
+
+Filters can also be run on changes to the stream by implementing the `Stream` interface. Currently, the stream interface
+supports `OnStreamComplete`, which runs when a stream completes for any reason (e.g an `ImmediateResponse` is returned,
+or extproc returns an `EOF`). `OnStreamComplete` allows adding a final async processing step, for instance emitting custom
+metrics.
+
 ## Testing Filters
 
 We provide a simple way to write and run integration tests against filters built with extproc-go. An example test case would look like the following:

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 
 	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
@@ -33,9 +34,10 @@ var (
 )
 
 type ExtProcessor struct {
-	filters []filter.Filter
-	log     logr.Logger
-	tracer  trace.Tracer
+	filters         []filter.Filter
+	streamCallbacks []filter.Stream
+	log             logr.Logger
+	tracer          trace.Tracer
 }
 
 var _ extproc.ExternalProcessorServer = &ExtProcessor{}
@@ -58,6 +60,16 @@ func New(options ...Option) *ExtProcessor {
 func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer) error {
 	req := filter.NewRequestContext()
 	ctx := procsrv.Context()
+	if len(svc.streamCallbacks) > 0 {
+		defer func() {
+			for _, s := range svc.streamCallbacks {
+				if err := s.OnStreamComplete(req); err != nil {
+					slog.Error(fmt.Sprintf("%T.OnStreamComplete returned an error", s), "err", err.Error())
+				}
+			}
+		}()
+	}
+
 	for {
 		procreq, err := procsrv.Recv()
 		if err != nil {
