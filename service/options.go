@@ -16,7 +16,6 @@ func (o optionFunc) apply(f *ExtProcessor) {
 	o(f)
 }
 
-// WithLogger configures the service with a logger
 func WithLogger(log logr.Logger) Option {
 	return optionFunc(func(svc *ExtProcessor) {
 		svc.log = log

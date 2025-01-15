@@ -197,7 +197,8 @@ func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, req *filter
 	}
 	crw := filter.NewCommonResponseWriter(req.ResponseHeaders)
 
-	for _, f := range svc.filters {
+	for i := len(svc.filters) - 1; i >= 0; i-- {
+		f := svc.filters[i]
 		select {
 		case <-ctx.Done():
 			return nil
