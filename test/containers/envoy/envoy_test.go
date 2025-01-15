@@ -11,9 +11,9 @@ import (
 
 func TestRunContainer(t *testing.T) {
 	container := envoy.NewTestContainer()
-	u, err := container.Run(context.Background(), "istio/proxyv2:1.24.2")
+	err := container.Run(context.Background(), "istio/proxyv2:1.24.2")
 	defer testcontainers.CleanupContainer(t, container)
 
 	require.NoError(t, err)
-	require.Contains(t, u.String(), "http://localhost:")
+	require.Contains(t, container.URL.String(), "http://localhost:")
 }
