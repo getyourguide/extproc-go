@@ -63,7 +63,7 @@ methods:
 - `ResponseHeaders`: response headers is run on a response being returned from the downstream
 
 The order of processing is determined by the order of filters passed to the server. On request, filters process the request
-from first to last, while on response, filters process the request from last to first. This matches the envoy implementation
+from first to last, while on response, filters process the request from last to first. This matches the [envoy implementation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_filters#filter-ordering)
 of filters.
 
 ## Stream API
