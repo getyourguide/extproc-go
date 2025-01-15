@@ -62,9 +62,9 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 	ctx := procsrv.Context()
 	if len(svc.streamCallbacks) > 0 {
 		defer func() {
-			for i, s := range svc.streamCallbacks {
+			for _, s := range svc.streamCallbacks {
 				if err := s.OnStreamComplete(req); err != nil {
-					slog.Error("filter.OnStreamComplete returned an error", "err", err.Error())
+					slog.Error(fmt.Sprintf("%T.OnStreamComplete returned an error", s), "err", err.Error())
 				}
 			}
 		}()
