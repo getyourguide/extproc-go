@@ -24,13 +24,13 @@ const (
 )
 
 var (
-	ProcessResourceName          = "Process"
 	RequestHeadersResourceName   = "RequestHeaders"
 	RequestBodyResourceName      = "RequestBody"
 	RequestTrailersResourceName  = "RequestTrailers"
 	ResponseHeadersResourceName  = "ResponseHeaders"
 	ResponseBodyResourceName     = "ResponseBody"
 	ResponseTrailersResourceName = "ResponseTrailers"
+	StreamCompleteResourceName   = "StreamComplete"
 )
 
 type ExtProcessor struct {
@@ -62,10 +62,15 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 	ctx := procsrv.Context()
 	if len(svc.streamCallbacks) > 0 {
 		defer func() {
+			ctx, span := svc.tracer.Start(ctx, StreamCompleteResourceName)
+			defer span.End()
 			for _, s := range svc.streamCallbacks {
+				resourceName := fmt.Sprintf("%T/%s", s, StreamCompleteResourceName)
+				_, span := svc.tracer.Start(ctx, resourceName)
 				if err := s.OnStreamComplete(req); err != nil {
-					slog.Error(fmt.Sprintf("%T.OnStreamComplete returned an error", s), "err", err.Error())
+					slog.Error(fmt.Sprintf("%T.%s returned an error", s, StreamCompleteResourceName), "err", err.Error())
 				}
+				span.End()
 			}
 		}()
 	}

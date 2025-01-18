@@ -59,6 +59,12 @@ func WithFilters(f ...filter.Filter) Option {
 	}
 }
 
+func WithServiceOptions(opts ...service.Option) Option {
+	return func(s *Server) {
+		s.serviceOpts = append(s.serviceOpts, opts...)
+	}
+}
+
 func WithGrpcServer(server *grpc.Server, network string, address string) Option {
 	return func(s *Server) {
 		s.grpcServer = server
