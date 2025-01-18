@@ -20,6 +20,11 @@ services:
     ports:
       - 8080:8080 # extproc: http echo
       - 8081:8081 # extproc: grpc server
+    environment:
+      DD_AGENT_HOST: datadog
+      DD_TRACE_AGENT_PORT: 8126
+      DD_ENV: development
+      DD_SERVICE: extproc-go
     develop:
       watch:
         - action: rebuild
@@ -33,3 +38,20 @@ services:
       interval: 5s
       timeout: 10s
       retries: 60
+
+  datadog:
+    environment:
+      - DD_API_KEY
+      - DD_APP_KEY
+      - DD_APM_ENABLED=true
+      - DD_ENV=development
+      - DD_CLUSTER=development
+    ports:
+      - 8126:8126
+    image: datadog/agent
+    profiles:
+      - dev
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/proc/:/host/proc/:ro"
+      - "/sys/fs/cgroup/:/host/sys/fs/cgroup:ro"

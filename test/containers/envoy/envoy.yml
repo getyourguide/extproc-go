@@ -116,12 +116,20 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: localhost
+                      address: datadog
                       port_value: 8126
 
 overload_manager:
   resource_monitors:
-    - name: "envoy.resource_monitors.global_downstream_max_connections"
+    - name: envoy.resource_monitors.global_downstream_max_connections
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
         max_active_downstream_connections: 1000
+
+tracing:
+  http:
+    name: envoy.tracers.datadog
+    typed_config:
+      "@type": type.googleapis.com/envoy.config.trace.v3.DatadogConfig
+      collector_cluster: datadog
+      service_name: extproc-go
