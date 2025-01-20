@@ -12,15 +12,13 @@ const (
 	requestID = "30149a57-c842-9e40-968d-bf9bdbed55b1"
 )
 
-var (
-	envoyHeadersValue = http.Header{
-		":scheme":      []string{"https"},
-		":authority":   []string{"example.com"},
-		":method":      []string{"GET"},
-		":path":        []string{"/?q=a"},
-		"X-Request-Id": []string{requestID},
-	}
-)
+var envoyHeadersValue = http.Header{
+	":scheme":      []string{"https"},
+	":authority":   []string{"example.com"},
+	":method":      []string{"GET"},
+	":path":        []string{"/?q=a"},
+	"X-Request-Id": []string{requestID},
+}
 
 func TestMutatedRequestHeaders(t *testing.T) {
 	for _, tt := range []struct {

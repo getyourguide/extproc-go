@@ -2,48 +2,57 @@ package service_test
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/getyourguide/extproc-go/filter"
 	"github.com/getyourguide/extproc-go/server"
-	"github.com/getyourguide/extproc-go/test"
+	extproctest "github.com/getyourguide/extproc-go/test"
 	"github.com/getyourguide/extproc-go/test/containers/envoy"
 	filtertest "github.com/getyourguide/extproc-go/test/filter"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
+	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/yaml"
 )
 
-var envoyProxy *envoy.TestContainer
+func TestService(t *testing.T) {
+	suite.Run(t, &ServiceTestSuite{})
+}
 
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	envoyProxy = envoy.NewTestContainer()
-	if err := envoyProxy.Run(ctx, "istio/proxyv2:1.24.2"); err != nil {
-		panic(err)
+type ServiceTestSuite struct {
+	suite.Suite
+	container *envoy.TestContainer
+	url       string
+	ctx       context.Context
+}
+
+func (suite *ServiceTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+	suite.container = envoy.NewTestContainer()
+	if err := suite.container.Run(suite.ctx, "istio/proxyv2:1.24.2"); err != nil {
+		log.Fatal(err)
 	}
-	m.Run()
-	if err := testcontainers.TerminateContainer(envoyProxy); err != nil {
-		panic(err)
+	suite.url = suite.container.URL.String()
+}
+
+func (suite *ServiceTestSuite) TearDownSuite() {
+	if err := suite.container.Terminate(suite.ctx); err != nil {
+		log.Fatalf("error terminating postgres container: %s", err)
 	}
 }
 
-func TestRequestHeaders(t *testing.T) {
-	runServiceTest(t, "testdata/request_header_order.yml")
+func (suite *ServiceTestSuite) TestRequestHeaders() {
+	suite.Run("testdata/request_header_order.yml")
 }
 
-func TestResponseHeaders(t *testing.T) {
-	runServiceTest(t, "testdata/response_header_order.yml")
+func (suite *ServiceTestSuite) TestResponseHeaders() {
+	suite.Run("testdata/response_header_order.yml")
 }
 
-type serviceTest struct {
-	Filters   []filtertest.Configuration `json:"filters"`
-	TestCases test.TestCases             `json:"tests"`
-}
-
-func runServiceTest(t *testing.T, fileName string) {
+func (suite *ServiceTestSuite) Run(fileName string) {
+	t := suite.T()
 	f, err := os.ReadFile(fileName)
 	require.NoError(t, err)
 
@@ -62,16 +71,24 @@ func runServiceTest(t *testing.T, fileName string) {
 		server.WithEcho(),
 		server.WithFilters(filters...),
 	)
-	go func() {
-		require.NoError(t, srv.Serve())
-	}()
-	waitTimeout := 5 * time.Second
 
-	err = server.WaitReady(srv, waitTimeout)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Serve()
+	}()
+
+	err = server.WaitReady(srv, 15*time.Second)
 	require.NoError(t, err)
 
 	tt.TestCases.Run(t,
-		test.WithURL(envoyProxy.URL.String()),
+		extproctest.WithURL(suite.url),
 	)
 	require.NoError(t, srv.Stop())
+	err = <-errCh
+	require.NoError(t, err)
+}
+
+type serviceTest struct {
+	Filters   []filtertest.Configuration `json:"filters"`
+	TestCases extproctest.TestCases      `json:"tests"`
 }

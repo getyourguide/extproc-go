@@ -1,0 +1,25 @@
+name: build
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+concurrency: ${{ github.ref }}
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
+jobs:
+  test:
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+
+      - name: tests
+        run: |
+          go test -vet=off -timeout 10m ./... -count=1 -race -v -p 1

@@ -21,7 +21,7 @@ func TestServer(t *testing.T) {
 		go func() {
 			errCh <- srv.Serve()
 		}()
-		err := server.WaitReady(srv, 5*time.Second)
+		err := server.WaitReady(srv, 10*time.Second)
 		require.NoError(t, err)
 
 		shutdown()
@@ -34,11 +34,11 @@ func TestServer(t *testing.T) {
 			server.WithEcho(),
 			server.WithFilters(&filter.NoOpFilter{}),
 		)
+		errCh := make(chan error, 1)
 		go func() {
-			require.NoError(t, srv.Serve())
+			errCh <- srv.Serve()
 		}()
-		defer require.NoError(t, srv.Stop())
-		err := server.WaitReady(srv, 5*time.Second)
+		err := server.WaitReady(srv, 10*time.Second)
 		require.NoError(t, err)
 
 		httpClient := http.Client{
@@ -51,7 +51,6 @@ func TestServer(t *testing.T) {
 
 		res, err := httpClient.Do(req)
 		require.NoError(t, err)
-
 		require.Equal(t, http.StatusOK, res.StatusCode)
 
 		var resp echo.RequestHeaderResponse
@@ -64,6 +63,8 @@ func TestServer(t *testing.T) {
 		for key, expectedValue := range expectedHeaders {
 			require.Equal(t, expectedValue, resp.Headers[key], "mismatch for header %s", key)
 		}
+		require.NoError(t, srv.Stop())
+		err = <-errCh
 		require.NoError(t, err)
 	})
 }
