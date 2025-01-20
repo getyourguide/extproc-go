@@ -162,6 +162,7 @@ func (s *Server) Stop() error {
 			return fmt.Errorf("http server shutdown error: %w", err)
 		}
 	}
+	time.Sleep(defaultShutdownWait)
 	return nil
 }
 
