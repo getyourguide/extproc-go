@@ -50,6 +50,32 @@ func New(ctx context.Context, opts ...Option) *Server {
 		opt(srv)
 	}
 
+	if srv.grpcNetwork == "" {
+		srv.grpcNetwork = defaultGrpcNetwork
+	}
+	if srv.grpcAddress == "" {
+		srv.grpcAddress = defaultGrpcAddress
+	}
+	if srv.grpcServer == nil {
+		srv.grpcServer = grpc.NewServer()
+	}
+
+	if srv.echoConfig.enabled {
+		if srv.echoConfig.mux == nil {
+			srv.echoConfig.mux = http.NewServeMux()
+		}
+		if srv.echoConfig.bindAddress == "" {
+			srv.echoConfig.bindAddress = defaultHTTPBindAddr
+		}
+
+		srv.echoConfig.mux.HandleFunc("/headers", echo.RequestHeaders)
+		srv.echoConfig.mux.HandleFunc("/response-headers", echo.ResponseHeaders)
+		srv.echoConfig.httpsrv = &http.Server{
+			Addr: srv.echoConfig.bindAddress,
+		}
+		srv.echoConfig.httpsrv.Handler = srv.echoConfig.mux
+
+	}
 	return srv
 }
 
@@ -96,32 +122,13 @@ func (s *Server) Serve() error {
 
 	errCh := make(chan error, 1)
 	if s.echoConfig.enabled {
-		if s.echoConfig.mux == nil {
-			s.echoConfig.mux = http.NewServeMux()
-		}
-		if s.echoConfig.bindAddress == "" {
-			s.echoConfig.bindAddress = defaultHTTPBindAddr
-		}
-
-		s.echoConfig.mux.HandleFunc("/headers", echo.RequestHeaders)
-		s.echoConfig.mux.HandleFunc("/response-headers", echo.ResponseHeaders)
 		go func() {
-			s.echoConfig.httpsrv = &http.Server{
-				Addr: s.echoConfig.bindAddress,
-			}
-			s.echoConfig.httpsrv.Handler = s.echoConfig.mux
 			slog.Info("starting http server", "address", s.echoConfig.bindAddress)
 			errCh <- s.echoConfig.httpsrv.ListenAndServe()
 		}()
 	}
 
 	go func() {
-		if s.grpcAddress == "" {
-			s.grpcAddress = defaultGrpcAddress
-		}
-		if s.grpcNetwork == "" {
-			s.grpcNetwork = defaultGrpcNetwork
-		}
 		if s.grpcNetwork == "unix" {
 			os.RemoveAll(s.grpcAddress) // nolint:errcheck
 		}
@@ -129,9 +136,6 @@ func (s *Server) Serve() error {
 		if err != nil {
 			errCh <- fmt.Errorf("cannot listen: %w", err)
 			return
-		}
-		if s.grpcServer == nil {
-			s.grpcServer = grpc.NewServer()
 		}
 		extprocService := service.New(s.serviceOpts...)
 		extproc.RegisterExternalProcessorServer(s.grpcServer, extprocService)
@@ -148,6 +152,9 @@ func (s *Server) Serve() error {
 }
 
 func (s *Server) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	if s.grpcServer != nil {
 		slog.Info("stopping grpc server")
 		s.grpcServer.GracefulStop()
@@ -155,13 +162,13 @@ func (s *Server) Stop() error {
 	if s.grpcNetwork == "unix" {
 		os.RemoveAll(s.grpcAddress) // nolint:errcheck
 	}
-	if s.echoConfig.httpsrv == nil {
-		return nil
+	if s.echoConfig.httpsrv != nil {
+		slog.Info("stopping http server")
+		if err := s.echoConfig.httpsrv.Shutdown(ctx); err != nil {
+			return fmt.Errorf("http server shutdown error: %w", err)
+		}
 	}
-	slog.Info("stopping http server")
-	if err := s.echoConfig.httpsrv.Shutdown(context.Background()); err != nil {
-		return fmt.Errorf("http server shutdown error: %w", err)
-	}
+	time.Sleep(defaultShutdownWait)
 	return nil
 }
 
@@ -181,9 +188,6 @@ func IsReady(s *Server) bool {
 		if res.StatusCode != http.StatusOK {
 			return false
 		}
-	}
-	if s.grpcServer == nil {
-		return false
 	}
 	return true
 }

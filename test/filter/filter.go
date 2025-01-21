@@ -47,7 +47,6 @@ func (f *Filter) RequestHeaders(ctx context.Context, crw *filter.CommonResponseW
 	crw.RemoveHeaders(f.Configuration.RequestHeaders.HeaderMutation.RemoveHeader...)
 	for k, v := range f.Configuration.RequestHeaders.HeaderMutation.SetHeader {
 		crw.SetHeader(k, v)
-
 	}
 	for k, v := range f.Configuration.RequestHeaders.HeaderMutation.AppendHeader {
 		crw.AppendHeader(k, v)

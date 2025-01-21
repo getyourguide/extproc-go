@@ -199,5 +199,4 @@ func NewRequestContext() *RequestContext {
 	}
 
 	return req
-
 }
