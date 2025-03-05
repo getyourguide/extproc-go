@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 0 # only enable security updates
+    directory: /
+    schedule:
+      interval: weekly
+      day: wednesday
+      timezone: Europe/Berlin
