@@ -1,4 +1,4 @@
-FROM golang:1.23-bullseye AS build
+FROM 130607246975.dkr.ecr.eu-central-1.amazonaws.com/base/golang-1.23:build-1.0.0 AS build
 
 WORKDIR /build
 
@@ -18,7 +18,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 RUN --mount=type=cache,target=/root/.cache/go-build \
     go build -o healthcheck examples/hack/healthcheck.go
 
-FROM gcr.io/distroless/base
+
+FROM 130607246975.dkr.ecr.eu-central-1.amazonaws.com/base/golang-1.23:runtime-1.0.0
 
 COPY --from=build --chown=nonroot:nonroot /build/extproc-go .
 COPY --from=build --chown=nonroot:nonroot /build/healthcheck .
