@@ -15,7 +15,6 @@ func main() {
 		server.WithFilters(&filters.SameSiteLaxMode{}),
 		server.WithEcho(),
 	).Serve()
-
 	if err != nil {
 		slog.Error("failed to start server", "error", err)
 		os.Exit(1)
