@@ -8,9 +8,9 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
-	go.opentelemetry.io/otel v1.35.0
-	go.opentelemetry.io/otel/trace v1.35.0
-	google.golang.org/grpc v1.72.1
+	go.opentelemetry.io/otel v1.36.0
+	go.opentelemetry.io/otel/trace v1.36.0
+	google.golang.org/grpc v1.72.2
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -60,7 +60,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
-	go.opentelemetry.io/otel/metric v1.35.0 // indirect
+	go.opentelemetry.io/otel/metric v1.36.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
