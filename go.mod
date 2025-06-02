@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/golang/protobuf v1.5.4
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
