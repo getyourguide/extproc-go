@@ -5,6 +5,7 @@
   "enabledManagers": [
     "gomod"
   ],
+  "labels": ["dependencies"],
   "postUpdateOptions": [
     "gomodUpdateImportPaths",
     "gomodMassage",
