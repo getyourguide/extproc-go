@@ -16,7 +16,7 @@ jobs:
       - name: Check permissions
         run: gh auth status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: List PR info
         run: gh pr view "$PR_URL" --json author,title,labels
