@@ -10,6 +10,9 @@ jobs:
       pull-requests: write
       contents: write
     steps:
+      - name: Login to GitHub CLI
+        run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+
       - name: Approve Renovate PR
         run: gh pr review --approve "$PR_URL"
         env:
