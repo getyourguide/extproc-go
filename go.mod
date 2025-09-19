@@ -6,11 +6,11 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
 	github.com/go-logr/logr v1.4.3
 	github.com/golang/protobuf v1.5.4
-	github.com/stretchr/testify v1.11.0
-	github.com/testcontainers/testcontainers-go v0.38.0
-	go.opentelemetry.io/otel v1.37.0
-	go.opentelemetry.io/otel/trace v1.37.0
-	google.golang.org/grpc v1.75.0
+	github.com/stretchr/testify v1.11.1
+	github.com/testcontainers/testcontainers-go v0.39.0
+	go.opentelemetry.io/otel v1.38.0
+	go.opentelemetry.io/otel/trace v1.38.0
+	google.golang.org/grpc v1.75.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
