@@ -1,6 +1,6 @@
 module github.com/getyourguide/extproc-go
 
-go 1.23.4
+go 1.25.0
 
 require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
