@@ -11,6 +11,12 @@ permissions:
   id-token: write
 
 jobs:
+  ci-required:
+    runs-on: [self-hosted, go-large]
+    needs: [test]
+    if: success()
+    steps:
+      - run: echo "Required checks passed"
   test:
     runs-on: [ubuntu-latest]
     steps:
