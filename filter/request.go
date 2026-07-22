@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // RequestContext stores the context between the different gRPC messages received from Envoy and it is used to store the request headers, response headers, and other information about the request.
@@ -15,12 +17,16 @@ import (
 type RequestContext struct {
 	RequestHeaders  http.Header
 	ResponseHeaders http.Header
-	url             *url.URL
-	cookies         []*http.Cookie
-	status          int
-	setCookies      []*http.Cookie
-	metadata        *Metadata
-	startTime       time.Time
+	// Attributes holds the Envoy attributes sent alongside request/response headers, keyed by
+	// namespace (e.g. "source", "request"). It is only populated when the Envoy ext_proc filter
+	// is configured with matching entries in request_attributes or response_attributes.
+	Attributes map[string]*structpb.Struct
+	url        *url.URL
+	cookies    []*http.Cookie
+	status     int
+	setCookies []*http.Cookie
+	metadata   *Metadata
+	startTime  time.Time
 }
 
 // RequestHeader gets the first value associated with the given key.
@@ -63,6 +69,19 @@ func (r *RequestContext) ResponseHeaderValues(key string) []string {
 		return nil
 	}
 	return r.ResponseHeaders.Values(key)
+}
+
+// Attribute returns the value of the given Envoy attribute, e.g. Attribute("source", "address").
+// It is only populated when the Envoy ext_proc filter is configured with a matching entry in
+// request_attributes or response_attributes.
+// See https://www.envoyproxy.io/docs/envoy/latest/xds/type/matcher/v3/cel.proto#arch-overview-attributes for the list of available attributes.
+func (r *RequestContext) Attribute(namespace, key string) (*structpb.Value, bool) {
+	ns, ok := r.Attributes[namespace]
+	if !ok {
+		return nil, false
+	}
+	v, ok := ns.GetFields()[key]
+	return v, ok
 }
 
 // Scheme returns the scheme of the request (http or https)
