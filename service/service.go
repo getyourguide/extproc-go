@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 
 	extproc "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/getyourguide/extproc-go/filter"
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -85,7 +87,7 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 		switch msg := procreq.Request.(type) {
 		case *extproc.ProcessingRequest_RequestHeaders:
 			ctx, span := svc.tracer.Start(ctx, RequestHeadersResourceName)
-			if err := svc.requestHeadersMessage(ctx, req, msg, procsrv); err != nil {
+			if err := svc.requestHeadersMessage(ctx, req, msg, procreq.GetAttributes(), procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
@@ -106,7 +108,7 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 			span.End()
 		case *extproc.ProcessingRequest_ResponseHeaders:
 			ctx, span := svc.tracer.Start(ctx, ResponseHeadersResourceName)
-			if err := svc.responseHeadersMessage(ctx, req, msg, procsrv); err != nil {
+			if err := svc.responseHeadersMessage(ctx, req, msg, procreq.GetAttributes(), procsrv); err != nil {
 				span.End()
 				return IgnoreCanceled(err)
 			}
@@ -131,12 +133,36 @@ func (svc *ExtProcessor) Process(procsrv extproc.ExternalProcessor_ProcessServer
 	}
 }
 
+// mergeAttributesIntoReq merges Envoy-provided attributes into req.Attributes.
+// Fields are merged per namespace rather than the namespace being overwritten,
+// since request and response stage attributes may share a namespace.
+func mergeAttributesIntoReq(req *filter.RequestContext, attrs map[string]*structpb.Struct) {
+	if len(attrs) == 0 {
+		return
+	}
+	if req.Attributes == nil {
+		req.Attributes = make(map[string]*structpb.Struct, len(attrs))
+	}
+	for namespace, s := range attrs {
+		existing, ok := req.Attributes[namespace]
+		if !ok || existing == nil {
+			req.Attributes[namespace] = s
+			continue
+		}
+		if existing.Fields == nil {
+			existing.Fields = make(map[string]*structpb.Value, len(s.GetFields()))
+		}
+		maps.Copy(existing.Fields, s.GetFields())
+	}
+}
+
 // Step 1. Request headers: Contains the headers from the original HTTP request.
-func (svc *ExtProcessor) requestHeadersMessage(ctx context.Context, req *filter.RequestContext, msg *extproc.ProcessingRequest_RequestHeaders, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) requestHeadersMessage(ctx context.Context, req *filter.RequestContext, msg *extproc.ProcessingRequest_RequestHeaders, attrs map[string]*structpb.Struct, procsrv extproc.ExternalProcessor_ProcessServer) error {
 	for _, header := range msg.RequestHeaders.GetHeaders().GetHeaders() {
 		headerValue := cmp.Or(string(header.GetRawValue()), header.GetValue())
 		req.RequestHeaders.Add(header.Key, headerValue)
 	}
+	mergeAttributesIntoReq(req, attrs)
 	crw := filter.NewCommonResponseWriter(req.RequestHeaders)
 
 	for _, f := range svc.filters {
@@ -207,11 +233,12 @@ func (svc *ExtProcessor) requestTrailersMessage(_ context.Context, _ *filter.Req
 }
 
 // Step 4. Response headers: Contains the headers from the HTTP response. Keep in mind that if the upstream system sends them before processing the request body that this message may arrive before the complete body.
-func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, req *filter.RequestContext, msg *extproc.ProcessingRequest_ResponseHeaders, procsrv extproc.ExternalProcessor_ProcessServer) error {
+func (svc *ExtProcessor) responseHeadersMessage(ctx context.Context, req *filter.RequestContext, msg *extproc.ProcessingRequest_ResponseHeaders, attrs map[string]*structpb.Struct, procsrv extproc.ExternalProcessor_ProcessServer) error {
 	for _, header := range msg.ResponseHeaders.GetHeaders().GetHeaders() {
 		headerValue := cmp.Or(string(header.GetRawValue()), header.GetValue())
 		req.ResponseHeaders.Add(header.Key, headerValue)
 	}
+	mergeAttributesIntoReq(req, attrs)
 	crw := filter.NewCommonResponseWriter(req.ResponseHeaders)
 
 	for i := len(svc.filters) - 1; i >= 0; i-- {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/getyourguide/extproc-go/filter"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -102,6 +103,34 @@ func TestMetadata(t *testing.T) {
 	t.Run("get non-existent key", func(t *testing.T) {
 		req := filter.NewRequestContext()
 		require.Empty(t, req.Metadata().Get("non-existent"))
+	})
+}
+
+func TestAttributes(t *testing.T) {
+	t.Run("read existing attribute", func(t *testing.T) {
+		req := filter.NewRequestContext()
+		req.Attributes = map[string]*structpb.Struct{
+			"envoy.filters.http.ext_proc": {
+				Fields: map[string]*structpb.Value{
+					"source.address": structpb.NewStringValue("10.0.0.1"),
+				},
+			},
+		}
+		v, ok := req.Attribute("source.address")
+		require.True(t, ok)
+		require.Equal(t, "10.0.0.1", v.GetStringValue())
+	})
+
+	t.Run("missing namespace or key", func(t *testing.T) {
+		req := filter.NewRequestContext()
+		_, ok := req.Attribute("source.address")
+		require.False(t, ok)
+
+		req.Attributes = map[string]*structpb.Struct{
+			"envoy.filters.http.ext_proc": {Fields: map[string]*structpb.Value{"source.address": structpb.NewStringValue("10.0.0.1")}},
+		}
+		_, ok = req.Attribute("source.port")
+		require.False(t, ok)
 	})
 }
 
