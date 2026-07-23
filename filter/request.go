@@ -11,22 +11,22 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// From https://github.com/envoyproxy/envoy/blob/e8d5030589fd725f879b17536315460eec302f07/source/extensions/filters/http/ext_proc/ext_proc.cc#L51
+const extProcFilterName = "envoy.filters.http.ext_proc"
+
 // RequestContext stores the context between the different gRPC messages received from Envoy and it is used to store the request headers, response headers, and other information about the request.
 // The Process method should be called on every message received from Envoy in order to update the request object.
 // Note that the request object is not thread-safe and should not be shared between goroutines.
 type RequestContext struct {
 	RequestHeaders  http.Header
 	ResponseHeaders http.Header
-	// Attributes holds the Envoy attributes sent alongside request/response headers, keyed by
-	// namespace (e.g. "source", "request"). It is only populated when the Envoy ext_proc filter
-	// is configured with matching entries in request_attributes or response_attributes.
-	Attributes map[string]*structpb.Struct
-	url        *url.URL
-	cookies    []*http.Cookie
-	status     int
-	setCookies []*http.Cookie
-	metadata   *Metadata
-	startTime  time.Time
+	Attributes      map[string]*structpb.Struct
+	url             *url.URL
+	cookies         []*http.Cookie
+	status          int
+	setCookies      []*http.Cookie
+	metadata        *Metadata
+	startTime       time.Time
 }
 
 // RequestHeader gets the first value associated with the given key.
@@ -71,12 +71,16 @@ func (r *RequestContext) ResponseHeaderValues(key string) []string {
 	return r.ResponseHeaders.Values(key)
 }
 
-// Attribute returns the value of the given Envoy attribute, e.g. Attribute("source", "address").
+// Attribute returns the value of the given Envoy attribute, e.g. Attribute("source.address").
 // It is only populated when the Envoy ext_proc filter is configured with a matching entry in
 // request_attributes or response_attributes.
-// See https://www.envoyproxy.io/docs/envoy/latest/xds/type/matcher/v3/cel.proto#arch-overview-attributes for the list of available attributes.
-func (r *RequestContext) Attribute(namespace, key string) (*structpb.Value, bool) {
-	ns, ok := r.Attributes[namespace]
+// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes#arch-overview-attributes for the list of available attributes.
+func (r *RequestContext) Attribute(key string) (*structpb.Value, bool) {
+	// Envoy uses the hardcoded filter name for the attributes map it sends to the ext_proc filter.
+	// This key isn't documented. Behavior and value taken from the codebase.
+	// This is not pretty but envoy does not give use a better option: we could flatten the map
+	// or take a "first" element - but that's seems to be even less future-proof.
+	ns, ok := r.Attributes[extProcFilterName]
 	if !ok {
 		return nil, false
 	}

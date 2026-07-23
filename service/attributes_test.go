@@ -12,9 +12,9 @@ func TestMergeAttributesIntoReq(t *testing.T) {
 	t.Run("populates empty req.Attributes", func(t *testing.T) {
 		req := filter.NewRequestContext()
 		mergeAttributesIntoReq(req, map[string]*structpb.Struct{
-			"source": {Fields: map[string]*structpb.Value{"address": structpb.NewStringValue("10.0.0.1")}},
+			"envoy.filters.http.ext_proc": {Fields: map[string]*structpb.Value{"source.address": structpb.NewStringValue("10.0.0.1")}},
 		})
-		v, ok := req.Attribute("source", "address")
+		v, ok := req.Attribute("source.address")
 		require.True(t, ok)
 		require.Equal(t, "10.0.0.1", v.GetStringValue())
 	})
@@ -22,17 +22,17 @@ func TestMergeAttributesIntoReq(t *testing.T) {
 	t.Run("merges fields across calls instead of overwriting the namespace", func(t *testing.T) {
 		req := filter.NewRequestContext()
 		mergeAttributesIntoReq(req, map[string]*structpb.Struct{
-			"request": {Fields: map[string]*structpb.Value{"path": structpb.NewStringValue("/foo")}},
+			"envoy.filters.http.ext_proc": {Fields: map[string]*structpb.Value{"request.path": structpb.NewStringValue("/foo")}},
 		})
 		mergeAttributesIntoReq(req, map[string]*structpb.Struct{
-			"request": {Fields: map[string]*structpb.Value{"method": structpb.NewStringValue("GET")}},
+			"envoy.filters.http.ext_proc": {Fields: map[string]*structpb.Value{"request.method": structpb.NewStringValue("GET")}},
 		})
 
-		path, ok := req.Attribute("request", "path")
+		path, ok := req.Attribute("request.path")
 		require.True(t, ok)
 		require.Equal(t, "/foo", path.GetStringValue())
 
-		method, ok := req.Attribute("request", "method")
+		method, ok := req.Attribute("request.method")
 		require.True(t, ok)
 		require.Equal(t, "GET", method.GetStringValue())
 	})
@@ -40,7 +40,7 @@ func TestMergeAttributesIntoReq(t *testing.T) {
 	t.Run("empty merge is a no-op", func(t *testing.T) {
 		req := filter.NewRequestContext()
 		mergeAttributesIntoReq(req, nil)
-		_, ok := req.Attribute("request", "path")
+		_, ok := req.Attribute("request.path")
 		require.False(t, ok)
 	})
 }

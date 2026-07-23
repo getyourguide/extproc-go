@@ -110,26 +110,26 @@ func TestAttributes(t *testing.T) {
 	t.Run("read existing attribute", func(t *testing.T) {
 		req := filter.NewRequestContext()
 		req.Attributes = map[string]*structpb.Struct{
-			"source": {
+			"envoy.filters.http.ext_proc": {
 				Fields: map[string]*structpb.Value{
-					"address": structpb.NewStringValue("10.0.0.1"),
+					"source.address": structpb.NewStringValue("10.0.0.1"),
 				},
 			},
 		}
-		v, ok := req.Attribute("source", "address")
+		v, ok := req.Attribute("source.address")
 		require.True(t, ok)
 		require.Equal(t, "10.0.0.1", v.GetStringValue())
 	})
 
 	t.Run("missing namespace or key", func(t *testing.T) {
 		req := filter.NewRequestContext()
-		_, ok := req.Attribute("source", "address")
+		_, ok := req.Attribute("source.address")
 		require.False(t, ok)
 
 		req.Attributes = map[string]*structpb.Struct{
-			"source": {Fields: map[string]*structpb.Value{"address": structpb.NewStringValue("10.0.0.1")}},
+			"envoy.filters.http.ext_proc": {Fields: map[string]*structpb.Value{"source.address": structpb.NewStringValue("10.0.0.1")}},
 		}
-		_, ok = req.Attribute("source", "port")
+		_, ok = req.Attribute("source.port")
 		require.False(t, ok)
 	})
 }
