@@ -145,7 +145,7 @@ func mergeAttributesIntoReq(req *filter.RequestContext, attrs map[string]*struct
 	}
 	for namespace, s := range attrs {
 		existing, ok := req.Attributes[namespace]
-		if !ok {
+		if !ok || existing == nil {
 			req.Attributes[namespace] = s
 			continue
 		}
