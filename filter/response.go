@@ -52,6 +52,7 @@ func (crw *CommonResponseWriter) headerAction(key string, value string, appendAc
 	case corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD, corev3.HeaderValueOption_OVERWRITE_IF_EXISTS:
 		crw.header.Set(key, value)
 	}
+	//nolint:staticcheck // Envoy still requires Append=true to preserve append semantics.
 	crw.commonResponse.HeaderMutation.SetHeaders = append(crw.commonResponse.HeaderMutation.SetHeaders, &corev3.HeaderValueOption{
 		Header: &corev3.HeaderValue{
 			Key: key,
