@@ -9,5 +9,6 @@ permissions:
   id-token: write
 jobs:
   review:
-    uses: getyourguide/sre-actions/.github/workflows/ai-readiness-review.yml@ceb7f56f4df60735615d794e0633bf2f135906cf
-    secrets: inherit
+    uses: getyourguide/sre-actions/.github/workflows/ai-readiness-review.yml@main
+    secrets:
+      GYGROBOT_WRITE_TOKEN: ${{ secrets.GYGROBOT_WRITE_TOKEN }}
