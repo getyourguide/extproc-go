@@ -1,0 +1,14 @@
+name: SRE AI-Readiness Review
+on:
+  schedule:
+    - cron: '0 6 1 * *'   # monthly
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+jobs:
+  review:
+    uses: getyourguide/sre-actions/.github/workflows/ai-readiness-review.yml@main
+    secrets:
+      GYGROBOT_WRITE_TOKEN: ${{ secrets.GYGROBOT_WRITE_TOKEN }}
