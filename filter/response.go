@@ -142,6 +142,11 @@ func NewImmediateResponseBuilder() *ImmediateResponseWriter {
 
 // headerAction sets a header with the given key and value and the given append action
 func (irw *ImmediateResponseWriter) headerAction(key string, value string, appendAction corev3.HeaderValueOption_HeaderAppendAction) *ImmediateResponseWriter {
+	var shouldAppend *wrappers.BoolValue
+	if appendAction == corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD {
+		shouldAppend = &wrappers.BoolValue{Value: true} // FIXME: This is not the documented behavior but it seems to be the only way to append a header.
+	}
+	//nolint:staticcheck // Envoy still requires Append=true to preserve append semantics.
 	irw.immediateResponse.ImmediateResponse.Headers.SetHeaders = append(irw.immediateResponse.ImmediateResponse.Headers.SetHeaders, &corev3.HeaderValueOption{
 		Header: &corev3.HeaderValue{
 			Key: key,
@@ -152,6 +157,7 @@ func (irw *ImmediateResponseWriter) headerAction(key string, value string, appen
 			RawValue: []byte(value), // FIXME: This depends on Envoy
 		},
 		AppendAction: appendAction,
+		Append:       shouldAppend,
 	})
 	return irw
 }
