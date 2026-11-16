@@ -1,0 +1,9 @@
+name: expect is wrongly nested under input
+input:
+  headers:
+    - name: user-agent
+      value: curl/8.0.0
+  expect:
+    requestHeaders:
+      - name: x-custom-header
+        exact: value-1
