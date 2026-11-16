@@ -315,7 +315,7 @@ func testData(t *testing.T, templateData any, files ...string) TestCases {
 
 		for _, doc := range bytes.Split(b.Bytes(), []byte("---")) {
 			var testcase Case
-			err = yaml.Unmarshal(doc, &testcase)
+			err = yaml.UnmarshalStrict(doc, &testcase)
 			require.NoError(t, err)
 			configs = append(configs, testcase)
 		}
