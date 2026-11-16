@@ -3,6 +3,8 @@ package test_test
 import (
 	"context"
 	"log"
+	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -12,6 +14,23 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+func TestLoadRejectsUnknownFields(t *testing.T) {
+	// Load fails via t.FailNow, so assert on it from a child process.
+	if os.Getenv("EXTPROC_LOAD_CHILD") == "1" {
+		extproctest.Load(t, "testdata/unknown_field.yml")
+		return
+	}
+	if testing.Short() {
+		t.Skip()
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=^TestLoadRejectsUnknownFields$")
+	cmd.Env = append(os.Environ(), "EXTPROC_LOAD_CHILD=1")
+	out, err := cmd.CombinedOutput()
+	require.Error(t, err, "Load should fail on unknown fields:\n%s", out)
+	require.Contains(t, string(out), `unknown field "expect"`)
+}
 
 func TestIntegration(t *testing.T) {
 	suite.Run(t, &IntegrationTestSuite{})
